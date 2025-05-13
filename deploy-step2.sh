@@ -109,5 +109,5 @@ docker compose -f "$COMPOSE_FILE" up -d || {
 }
 
 
-echo "Post-reboot deployment completed"
+echo "FFM-HUB Service Deployment completed"
 exit 0

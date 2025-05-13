@@ -2,13 +2,11 @@
 
 # 變數定義
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV_FILE="$SCRIPT_DIR/.env"
 LOCAL_VM_IP=$(curl -s ifconfig.me)
 COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yaml"
 KEYCLOAK_CONTAINER="keycloak"
 KEYCLOAK_URL="https://0.0.0.0:8443"
-REALM_NAME="ffm-realm"
-NEW_USER="ffm-admin"
-NEW_USER_PASSWORD="ffm-admin"
 ROLE_NAME="admin"
 ADMIN_USERNAME="admin"
 ADMIN_PASSWORD="admin"
@@ -27,6 +25,24 @@ if [ -z "$VM_IP" ]; then
 fi
 
 LOCAL_VM_IP="https://${VM_IP}:80/*"
+
+if [ ! -f "$ENV_FILE" ]; then
+    echo "未找到 .env 檔案: $ENV_FILE"
+    exit 1
+fi
+
+sed -i -e 's/\r$//' $ENV_FILE
+
+# 從 .env 檔案載入環境變數
+set -o allexport
+source "$ENV_FILE"
+set +o allexport
+
+# 驗證環境變數
+if [ -z "$NEW_USER" ] || [ -z "$NEW_USER_PASSWORD" ] || [ -z "$REALM_NAME"]; then
+    echo "$ENV_FILE no params NEW_USER or NEW_USER_PASSWORD or REALM_NAME"
+    exit 1
+fi
 
 # 取得管理員存取權杖
 echo "Obtaining Keycloak admin access token..."
