@@ -25,7 +25,7 @@ services:
       - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /opt/vllm_test:/opt/vllm_test
+      - /opt/${MODEL_DIR}:/opt/${MODEL_DIR}
     environment:
       - KEYCLOAK_SERVER_URL=https://${VM_IP}:8443
       - VLLM_HOST=${VM_IP}
@@ -36,6 +36,7 @@ services:
       - S3_PREFIX=${S3_PREFIX}
       - KEYCLOAK_USERNAME=${NEW_USER}
       - KEYCLOAK_PASSWORD=${NEW_USER_PASSWORD}
+      - MODEL_DIR=${MODEL_DIR}
   keycloak:
     image: quay.io/keycloak/keycloak:26.2.0
     container_name: keycloak
