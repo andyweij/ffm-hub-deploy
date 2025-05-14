@@ -5,7 +5,7 @@ services:
     ports:
       - "80:8443"
     volumes:
-      - ./keystore.p12:/app/certs/keystore.p12
+      - ./config/keystore.p12:/app/certs/keystore.p12
     environment:
       - SPRING_PROFILES_ACTIVE=stage
       - APIMODULE_URL=http://${VM_IP}:8080
@@ -19,7 +19,7 @@ services:
       - SERVER_SSL_KEYSTORE_TYPE=PKCS12
 
   api-relay:
-    image: 202.5.253.162:443/ffm-hub/api-relay:0.0.12
+    image: 202.5.253.162:443/ffm-hub/api-relay:0.0.13
     container_name: api-relay
     ports:
       - "8080:8080"
@@ -31,16 +31,21 @@ services:
       - VLLM_HOST=${VM_IP}
       - S3_SECRET_KEY=${S3_SECRET_KEY}
       - S3_ACCESS_KEY=${S3_ACCESS_KEY}
-
+      - S3_END_POINT=${S3_END_POINT}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - S3_PREFIX=${S3_PREFIX}
+      - KEYCLOAK_USERNAME=${NEW_USER}
+      - KEYCLOAK_PASSWORD=${NEW_USER_PASSWORD}
   keycloak:
     image: quay.io/keycloak/keycloak:26.2.0
     container_name: keycloak
     ports:
       - "8443:8443"
+      - "9000:9000"
     volumes:
-      - ./keycloak.crt.pem:/opt/keycloak/conf/keycloak.crt.pem
-      - ./keycloak.key.pem:/opt/keycloak/conf/keycloak.key.pem
-      - ./ffm-hub.json:/opt/keycloak/data/import/ffm-hub.json
+      - ./config/keycloak.crt.pem:/opt/keycloak/conf/keycloak.crt.pem
+      - ./config/keycloak.key.pem:/opt/keycloak/conf/keycloak.key.pem
+      - ./config/ffm-hub.json:/opt/keycloak/data/import/ffm-hub.json
     environment:
       - KEYCLOAK_ADMIN=admin
       - KEYCLOAK_ADMIN_PASSWORD=admin
@@ -48,4 +53,4 @@ services:
       - KC_HTTPS_CERTIFICATE_FILE=/opt/keycloak/conf/keycloak.crt.pem
       - KC_HTTPS_CERTIFICATE_KEY_FILE=/opt/keycloak/conf/keycloak.key.pem
       - KC_HEALTH_ENABLED=true
-    command: start-dev --import-realm --health-enabled
+    command: start-dev --import-realm

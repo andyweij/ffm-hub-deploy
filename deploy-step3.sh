@@ -2,7 +2,7 @@
 
 # 變數定義
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_FILE="$SCRIPT_DIR/.env"
+ENV_FILE="$SCRIPT_DIR/config/.env"
 LOCAL_VM_IP=$(curl -s ifconfig.me)
 COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yaml"
 KEYCLOAK_CONTAINER="keycloak"
@@ -39,10 +39,37 @@ source "$ENV_FILE"
 set +o allexport
 
 # 驗證環境變數
-if [ -z "$NEW_USER" ] || [ -z "$NEW_USER_PASSWORD" ] || [ -z "$REALM_NAME"]; then
+if [ -z "$NEW_USER" ] || [ -z "$NEW_USER_PASSWORD" ] || [ -z "$REALM_NAME" ]; then
     echo "$ENV_FILE no params NEW_USER or NEW_USER_PASSWORD or REALM_NAME"
     exit 1
 fi
+
+echo "Checking Keycloak health..."
+MAX_WAIT=120
+WAIT_COUNT=0
+until curl -k -s -f "http://localhost:8443/q/health/live" >/dev/null; do
+    CURL_EXIT_CODE=$?
+    if [ $CURL_EXIT_CODE -eq 52 ]; then
+        echo "assuming Keycloak is ready"
+        break
+    elif [ $CURL_EXIT_CODE -eq 56 ]; then
+        echo "Keycloak is not ready yet (code 56: Connection reset by peer), retrying..."
+    else
+        echo "Unexpected curl error (code $CURL_EXIT_CODE)"
+        echo "Keycloak container logs:"
+        docker logs "$KEYCLOAK_CONTAINER"
+        exit 1
+    fi
+    sleep 5
+    WAIT_COUNT=$((WAIT_COUNT + 2))
+    if [ $WAIT_COUNT -ge $MAX_WAIT ]; then
+        echo "Keycloak health check timed out"
+        echo "Keycloak container logs:"
+        docker logs "$KEYCLOAK_CONTAINER"
+        exit 1
+    fi
+done
+echo "Keycloak health check passed"
 
 # 取得管理員存取權杖
 echo "Obtaining Keycloak admin access token..."

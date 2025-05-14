@@ -2,11 +2,11 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_FILE="$SCRIPT_DIR/.env"
+ENV_FILE="$SCRIPT_DIR/config/.env"
 # 日誌設置
 LOG_FILE="$SCRIPT_DIR/deploy-step2.log"
 exec > >(tee -a "$LOG_FILE") 2>&1
-echo "Starting post-reboot script: $(date)"
+echo "Starting deploy step2 : $(date)"
 
 # 變數定義
 COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yaml"
@@ -27,11 +27,15 @@ source "$ENV_FILE"
 set +o allexport
 
 # 驗證環境變數
-if [ -z "$HARBOR_USERNAME" ] || [ -z "$HARBOR_PASSWORD" ] || [ -z "$HARBOR_REGISTRY"]; then
+if [ -z "$HARBOR_USERNAME" ] || [ -z "$HARBOR_PASSWORD" ] || [ -z "$HARBOR_REGISTRY" ]; then
     echo "$ENV_FILE no params USERNAME or PASSWORD"
     exit 1
 fi
 
+if [ -z "$S3_SECRET_KEY" ] || [ -z "$S3_ACCESS_KEY" ] ||  [ -z "$S3_END_POINT" ] || [ -z "$S3_BUCKET_NAME" ] || [ -z "$S3_PREFIX" ]; then
+    echo "$ENV_FILE s3 setting parameter may be empty"
+    exit 1
+fi
 
 # 安裝 jq（若尚未安裝）
 if ! command -v jq &>/dev/null; then
@@ -88,6 +92,8 @@ until systemctl is-active --quiet docker; do
 done
 echo "Docker service is ready"
 
+
+
 # 檢查 docker-compose.yaml
 if [ ! -f "$COMPOSE_FILE" ]; then
     echo "docker-compose.yaml not found: $COMPOSE_FILE"
@@ -108,6 +114,17 @@ docker compose -f "$COMPOSE_FILE" up -d || {
     exit 1
 }
 
+# 執行 deploy-step3.sh
+echo "Executing deploy-step3.sh..."
+STEP3_SCRIPT="$SCRIPT_DIR/deploy-step3.sh"
+if [ ! -f "$STEP3_SCRIPT" ]; then
+    echo "Can't find deploy-step3.sh file: $STEP3_SCRIPT"
+    exit 1
+fi
+bash "$STEP3_SCRIPT" || {
+    echo "Failed to execute deploy-step3.sh"
+    exit 1
+}
 
 echo "FFM-HUB Service Deployment completed"
 exit 0
