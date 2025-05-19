@@ -11,10 +11,10 @@ echo "Starting deploy step2 : $(date)"
 COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yaml"
 DAEMON_JSON="/etc/docker/daemon.json"
 TEMP_JSON="/tmp/daemon.json.tmp"
+CERT_DIR="$SCRIPT_DIR/certs/"
 
-
-if [ ! -f "$ENV_FILE" ]; then
-    echo "未找到 .env 檔案: $ENV_FILE"
+if [ ! -d "$CERT_DIR" ] || [ ! -f "$ENV_FILE" ]; then
+    echo "請確認憑證目錄 ($CERT_DIR) 與 .env 檔案 ($ENV_FILE) 是否存在"
     exit 1
 fi
 
