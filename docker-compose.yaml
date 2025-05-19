@@ -3,12 +3,13 @@ services:
     image: 202.5.253.162:443/ffm-hub/aiportal:0.0.13
     container_name: aiportal
     ports:
-      - "80:8443"
+      - "443:8443"
     volumes:
-      - ./config/keystore.p12:/app/certs/keystore.p12
+      - ./certs/aiportal/keystore.p12:/app/certs/keystore.p12
+      - ./certs/api-relay/certificate.crt:/app/certs/certificate.crt
     environment:
       - SPRING_PROFILES_ACTIVE=stage
-      - APIMODULE_URL=http://${VM_IP}:8080
+      - APIMODULE_URL=https://${VM_IP}:8080
       - FRONTEND_KEYCLOAK_URL=https://${VM_IP}:8443
       - FRONTEND_KEYCLOAK_REALM=ffm-realm
       - FRONTEND_KEYCLOAK_CLIENTID=ffm
@@ -17,18 +18,26 @@ services:
       - SERVER_SSL_KEYSTORE=/app/certs/keystore.p12
       - SERVER_SSL_KEYSTORE_PASSWORD=changeit
       - SERVER_SSL_KEYSTORE_TYPE=PKCS12
-
+    command: >
+      sh -c "keytool -importcert -trustcacerts -noprompt -alias api-relay -file /app/certs/certificate.crt -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit && java 
   api-relay:
-    image: 202.5.253.162:443/ffm-hub/api-relay:0.0.13
+    image: 202.5.253.162:443/ffm-hub/api-relay:0.0.14
     container_name: api-relay
     ports:
-      - "8080:8080"
+      - "8080:8443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /opt/${MODEL_DIR}:/opt/${MODEL_DIR}
+      - ./certs/api-relay/keystore.p12:/app/certs/keystore.p12
+      - ./certs/keycloak/certificate.crt:/app/certs/certificate.crt
     environment:
       - KEYCLOAK_SERVER_URL=https://${VM_IP}:8443
       - VLLM_HOST=${VM_IP}
+      - SERVER_PORT=8443
+      - SERVER_SSL_ENABLED=true
+      - SERVER_SSL_KEYSTORE=/app/certs/keystore.p12
+      - SERVER_SSL_KEYSTORE_PASSWORD=changeit
+      - SERVER_SSL_KEYSTORE_TYPE=PKCS12
       - S3_SECRET_KEY=${S3_SECRET_KEY}
       - S3_ACCESS_KEY=${S3_ACCESS_KEY}
       - S3_END_POINT=${S3_END_POINT}
@@ -37,6 +46,8 @@ services:
       - KEYCLOAK_USERNAME=${NEW_USER}
       - KEYCLOAK_PASSWORD=${NEW_USER_PASSWORD}
       - MODEL_DIR=${MODEL_DIR}
+    command: >
+      sh -c "keytool -importcert -trustcacerts -noprompt -alias keycloak -file /app/certs/certificate.crt -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit && java 
   keycloak:
     image: quay.io/keycloak/keycloak:26.2.0
     container_name: keycloak
@@ -44,14 +55,14 @@ services:
       - "8443:8443"
       - "9000:9000"
     volumes:
-      - ./config/keycloak.crt.pem:/opt/keycloak/conf/keycloak.crt.pem
-      - ./config/keycloak.key.pem:/opt/keycloak/conf/keycloak.key.pem
+      - ./certs/keycloak/certificate.crt:/opt/keycloak/conf/keycloak.crt
+      - ./certs/keycloak/private.key:/opt/keycloak/conf/keycloak.key
       - ./config/ffm-hub.json:/opt/keycloak/data/import/ffm-hub.json
     environment:
       - KEYCLOAK_ADMIN=admin
       - KEYCLOAK_ADMIN_PASSWORD=admin
       - KC_HTTPS_ENABLED=true
-      - KC_HTTPS_CERTIFICATE_FILE=/opt/keycloak/conf/keycloak.crt.pem
-      - KC_HTTPS_CERTIFICATE_KEY_FILE=/opt/keycloak/conf/keycloak.key.pem
+      - KC_HTTPS_CERTIFICATE_FILE=/opt/keycloak/conf/keycloak.crt
+      - KC_HTTPS_CERTIFICATE_KEY_FILE=/opt/keycloak/conf/keycloak.key
       - KC_HEALTH_ENABLED=true
     command: start-dev --import-realm

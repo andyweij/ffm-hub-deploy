@@ -4,7 +4,6 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="$SCRIPT_DIR/config/.env"
 LOCAL_VM_IP=$(curl -s ifconfig.me)
-COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yaml"
 KEYCLOAK_CONTAINER="keycloak"
 KEYCLOAK_URL="https://0.0.0.0:8443"
 ROLE_NAME="admin"
@@ -24,7 +23,7 @@ if [ -z "$VM_IP" ]; then
     exit 1
 fi
 
-LOCAL_VM_IP="https://${VM_IP}:80/*"
+LOCAL_VM_IP="https://${VM_IP}/*"
 
 if [ ! -f "$ENV_FILE" ]; then
     echo "未找到 .env 檔案: $ENV_FILE"

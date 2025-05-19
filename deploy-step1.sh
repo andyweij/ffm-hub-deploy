@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# ÅÜ¼Æ©w¸q
+# è®Šæ•¸å®šç¾©
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="$SCRIPT_DIR/config/.env"
 
@@ -10,66 +10,66 @@ if [ ! -f "$ENV_FILE" ]; then
     exit 1
 fi
 
-# ±q .env ÀÉ®×¸ü¤JÀô¹ÒÅÜ¼Æ
+# å¾ž .env æª”æ¡ˆè¼‰å…¥ç’°å¢ƒè®Šæ•¸
 set -o allexport
 source "$ENV_FILE"
 set +o allexport
-# ­«·s¨ú±o³Ì·sªº IP¡]Á×§K³Q¤W­±ÂÐ»\¡^
+# é‡æ–°å–å¾—æœ€æ–°çš„ IPï¼ˆé¿å…è¢«ä¸Šé¢è¦†è“‹ï¼‰
 VM_IP=$(curl -s ifconfig.me)
 
 if grep -q "^VM_IP=" "$ENV_FILE"; then
     echo ".env is already exists VM_IP , will overwrite"
-    # ¨Ï¥Î sed ­×§ï­ì¦³ªº VM_IP ¤º®e
+    # ä½¿ç”¨ sed ä¿®æ”¹åŽŸæœ‰çš„ VM_IP å…§å®¹
     sed -i "s/^VM_IP=.*/VM_IP=$VM_IP/" "$ENV_FILE"
 else
     echo "Create VM_IP in .env"
     echo -e "\nVM_IP=$VM_IP" >> "$ENV_FILE"
 fi
 
-# ¤é»x³]¸m
+# æ—¥èªŒè¨­ç½®
 LOG_FILE="$SCRIPT_DIR/deploy_nvidia_docker.log"
 exec > >(tee -a "$LOG_FILE") 2>&1
 echo "Starting deployment script : $(date)"
 REBOOT_FLAG="/tmp/reboot_flag"
 
-# ÀË¬d¬O§_»Ý­n°õ¦æªì©l¦w¸Ë
+# æª¢æŸ¥æ˜¯å¦éœ€è¦åŸ·è¡Œåˆå§‹å®‰è£
 echo "Running initial installation process..."
 touch "$REBOOT_FLAG"
 
-# 1. ¦w¸Ë Docker
+# 1. å®‰è£ Docker
 echo "Installing Docker..."
 sudo apt-get update
 sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
 
-# ²K¥[ Docker GPG Áä
+# æ·»åŠ  Docker GPG éµ
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
 
-# ²K¥[ Docker APT ³nÅé®w
+# æ·»åŠ  Docker APT è»Ÿé«”åº«
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
-# §ó·s¨Ã¦w¸Ë Docker
+# æ›´æ–°ä¸¦å®‰è£ Docker
 sudo apt-get update
 sudo apt-get install -y docker-ce docker-ce-cli containerd.io || {
     echo "Failed to install Docker"
     exit 1
 }
 
-# ±Ò°Ê¨Ã±Ò¥Î Docker ªA°È
+# å•Ÿå‹•ä¸¦å•Ÿç”¨ Docker æœå‹™
 sudo systemctl start docker
 sudo systemctl enable docker
 
-# ¦w¸Ë Docker Compose ´¡¥ó
+# å®‰è£ Docker Compose æ’ä»¶
 echo "Installing Docker Compose plugin..."
 sudo apt-get install -y docker-compose-plugin || {
     echo "Failed to install Docker Compose plugin"
     exit 1
 }
 
-# ³]¸m Docker Åv­­
+# è¨­ç½® Docker æ¬Šé™
 sudo groupadd docker || true
 sudo usermod -aG docker "$USER"
 
-# 2. ¦w¸Ë NVIDIA ÅX°Ê
+# 2. å®‰è£ NVIDIA é©…å‹•
 echo "Installing NVIDIA driver..."
 # sudo apt-get update
 sudo apt-get install -y ubuntu-drivers-common
@@ -79,7 +79,7 @@ sudo ubuntu-drivers install || {
 }
 
 
-# 4. ¦w¸Ë NVIDIA Container Toolkit
+# 4. å®‰è£ NVIDIA Container Toolkit
 echo "Installing NVIDIA Container Toolkit..."
 curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
 curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
@@ -92,6 +92,15 @@ sudo apt-get install -y nvidia-container-toolkit || {
     exit 1
 }
 sudo nvidia-ctk runtime configure --runtime=docker
+
+# å®‰è£ jqï¼ˆè‹¥å°šæœªå®‰è£ï¼‰
+if ! command -v jq &>/dev/null; then
+    echo "Installing jq..."
+    sudo apt-get update && sudo apt-get install -y jq || {
+        echo "Failed to install jq"
+        exit 1
+    }
+fi
 
 echo "Rebooting system to complete installation..."
 sleep 2

@@ -1,32 +1,31 @@
 #!/bin/bash
 set -e
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="$SCRIPT_DIR/config/.env"
-# ¤é»x³]¸m
+# æ—¥èªŒè¨­ç½®
 LOG_FILE="$SCRIPT_DIR/deploy-step2.log"
 exec > >(tee -a "$LOG_FILE") 2>&1
 echo "Starting deploy step2 : $(date)"
 
-# ÅÜ¼Æ©w¸q
+# è®Šæ•¸å®šç¾©
 COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yaml"
 DAEMON_JSON="/etc/docker/daemon.json"
 TEMP_JSON="/tmp/daemon.json.tmp"
 
 
 if [ ! -f "$ENV_FILE" ]; then
-    echo "¥¼§ä¨ì .env ÀÉ®×: $ENV_FILE"
+    echo "æœªæ‰¾åˆ° .env æª”æ¡ˆ: $ENV_FILE"
     exit 1
 fi
 
 sed -i -e 's/\r$//' $ENV_FILE
 
-# ±q .env ÀÉ®×¸ü¤JÀô¹ÒÅÜ¼Æ
+# å¾ .env æª”æ¡ˆè¼‰å…¥ç’°å¢ƒè®Šæ•¸
 set -o allexport
 source "$ENV_FILE"
 set +o allexport
 
-# ÅçÃÒÀô¹ÒÅÜ¼Æ
+# é©—è­‰ç’°å¢ƒè®Šæ•¸
 if [ -z "$HARBOR_USERNAME" ] || [ -z "$HARBOR_PASSWORD" ] || [ -z "$HARBOR_REGISTRY" ]; then
     echo "$ENV_FILE no params USERNAME or PASSWORD"
     exit 1
@@ -37,16 +36,7 @@ if [ -z "$S3_SECRET_KEY" ] || [ -z "$S3_ACCESS_KEY" ] ||  [ -z "$S3_END_POINT" ]
     exit 1
 fi
 
-# ¦w¸Ë jq¡]­Y©|¥¼¦w¸Ë¡^
-if ! command -v jq &>/dev/null; then
-    echo "Installing jq..."
-    sudo apt-get update && sudo apt-get install -y jq || {
-        echo "Failed to install jq"
-        exit 1
-    }
-fi
-
-# µ¥«İ Docker ªA°È±Ò°Ê
+# ç­‰å¾… Docker æœå‹™å•Ÿå‹•
 echo "Waiting for Docker service to start..."
 MAX_WAIT=60
 WAIT_COUNT=0
@@ -61,7 +51,7 @@ until systemctl is-active --quiet docker; do
 done
 echo "Docker service is ready"
 
-# °t¸m insecure-registries(¥¿¦¡¾ÌÃÒ»İ²¾°£)
+# é…ç½® insecure-registries(æ­£å¼æ†‘è­‰éœ€ç§»é™¤)
 echo "Configuring Docker insecure-registries..."
 if [ ! -f "$DAEMON_JSON" ]; then
     echo "{}" | sudo tee "$DAEMON_JSON" > /dev/null
@@ -78,7 +68,7 @@ sudo systemctl restart docker || {
     exit 1
 }
 
-# ¦A¦¸µ¥«İ Docker ªA°È
+# å†æ¬¡ç­‰å¾… Docker æœå‹™
 echo "Waiting for Docker service to start again..."
 WAIT_COUNT=0
 until systemctl is-active --quiet docker; do
@@ -94,27 +84,27 @@ echo "Docker service is ready"
 
 
 
-# ÀË¬d docker-compose.yaml
+# æª¢æŸ¥ docker-compose.yaml
 if [ ! -f "$COMPOSE_FILE" ]; then
     echo "docker-compose.yaml not found: $COMPOSE_FILE"
     exit 1
 fi
 
-# µn¿ı Harbor
+# ç™»éŒ„ Harbor
 echo "Logging in to Harbor..."
 echo "$HARBOR_PASSWORD" | docker login "$HARBOR_REGISTRY" -u "$HARBOR_USERNAME" --password-stdin || {
     echo "Failed to log in to Harbor"
     exit 1
 }
 
-# ±Ò°Ê Docker Compose
+# å•Ÿå‹• Docker Compose
 echo "Starting Docker Compose..."
 docker compose -f "$COMPOSE_FILE" up -d || {
     echo "Failed to start Docker Compose"
     exit 1
 }
 
-# °õ¦æ deploy-step3.sh
+# åŸ·è¡Œ deploy-step3.sh
 echo "Executing deploy-step3.sh..."
 STEP3_SCRIPT="$SCRIPT_DIR/deploy-step3.sh"
 if [ ! -f "$STEP3_SCRIPT" ]; then
