@@ -48,6 +48,19 @@ services:
       - MODEL_DIR=${MODEL_DIR}
     command: >
       sh -c "keytool -importcert -trustcacerts -noprompt -alias keycloak -file /app/certs/certificate.crt -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit && java -jar app.jar"
+  postgres:
+    image: postgres:latest
+    container_name: ffm-hub-db
+    volumes:
+      - keycloak_db:/var/lib/postgresql/data
+    expose:
+      - 5432
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_DB=keycloak
+      - POSTGRES_USER=keycloak
+      - POSTGRES_PASSWORD=keycloak
   keycloak:
     image: quay.io/keycloak/keycloak:26.2.0
     container_name: keycloak
@@ -65,4 +78,11 @@ services:
       - KC_HTTPS_CERTIFICATE_FILE=/opt/keycloak/conf/keycloak.crt
       - KC_HTTPS_CERTIFICATE_KEY_FILE=/opt/keycloak/conf/keycloak.key
       - KC_HEALTH_ENABLED=true
+      - KC_DB=postgres
+      - KC_DB_USERNAME=keycloak
+      - KC_DB_PASSWORD=keycloak
+      - KC_DB_URL=jdbc:postgresql://postgres:5432/keycloak
     command: start-dev --import-realm
+
+volumes:
+  keycloak_db:
