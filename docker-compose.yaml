@@ -19,7 +19,9 @@ services:
       - SERVER_SSL_KEYSTORE_PASSWORD=changeit
       - SERVER_SSL_KEYSTORE_TYPE=PKCS12
     command: >
-      sh -c "keytool -importcert -trustcacerts -noprompt -alias api-relay -file /app/certs/certificate.crt -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit && java -jar app.jar"
+      sh -c "keytool -delete -alias api-relay -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit || true &&
+             keytool -importcert -trustcacerts -noprompt -alias api-relay -file /app/certs/certificate.crt -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit &&
+             java -jar app.jar"
   api-relay:
     image: 202.5.253.162:443/ffm-hub/api-relay:0.0.14
     container_name: api-relay
@@ -47,7 +49,9 @@ services:
       - KEYCLOAK_PASSWORD=${NEW_USER_PASSWORD}
       - MODEL_DIR=${MODEL_DIR}
     command: >
-      sh -c "keytool -importcert -trustcacerts -noprompt -alias keycloak -file /app/certs/certificate.crt -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit && java -jar app.jar"
+      sh -c "keytool -delete -alias keycloak -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit || true &&
+             keytool -importcert -trustcacerts -noprompt -alias keycloak -file /app/certs/certificate.crt -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit &&
+             java -jar app.jar"
   postgres:
     image: postgres:latest
     container_name: ffm-hub-db
