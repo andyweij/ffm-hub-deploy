@@ -1,6 +1,6 @@
 services:
   aiportal:
-    image: 202.5.253.162:443/ffm-hub/aiportal:0.0.13
+    image: 202.5.253.162:443/ffm-hub/aiportal:0.0.23
     container_name: aiportal
     ports:
       - "443:8443"
@@ -23,7 +23,7 @@ services:
              keytool -importcert -trustcacerts -noprompt -alias api-relay -file /app/certs/certificate.crt -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit &&
              java -jar app.jar"
   api-relay:
-    image: 202.5.253.162:443/ffm-hub/api-relay:0.0.14
+    image: 202.5.253.162:443/ffm-hub/api-relay:0.0.17
     container_name: api-relay
     ports:
       - "8080:8443"
@@ -75,6 +75,7 @@ services:
       - ./certs/keycloak/certificate.crt:/opt/keycloak/conf/keycloak.crt
       - ./certs/keycloak/private.key:/opt/keycloak/conf/keycloak.key
       - ./config/ffm-hub.json:/opt/keycloak/data/import/ffm-hub.json
+      - ./keycloak_theme:/opt/keycloak/themes
     environment:
       - KEYCLOAK_ADMIN=admin
       - KEYCLOAK_ADMIN_PASSWORD=admin

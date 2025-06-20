@@ -2,7 +2,7 @@
 	"TinyLlama-1.1B-Chat-v0.6":
 		{
 			"vllmVersion":"v0.8.2",
-			"description":"測試用小型語言模型v0.6",
+			"description":"輕量語言模型，適合資源有限環境",
 			"downloadUrl":"",
 			"size":"5677238046",
 			"imagesSupport":0,
@@ -16,7 +16,7 @@
 	"TinyLlama-1.1B-Chat-v1.0":
 		{
 			"vllmVersion":"v0.8.2",
-			"description":"測試用小型語言模型v1.0",
+			"description":"優化版輕量語言模型，提升多輪對話質量",
 			"downloadUrl":"",
 			"size":"4403847503",
 			"imagesSupport":0,
@@ -30,7 +30,7 @@
 	"Qwen2.5-1.5B-Instruct":
 		{
 			"vllmVersion":"v0.8.2",
-			"description":"台灣文化理解與繁體中文處理",
+			"description":"小型指令微調語言模型",
 			"downloadUrl":"",
 			"size":"6191329547",
 			"imagesSupport":0,
@@ -44,11 +44,11 @@
 	"DeepSeek-R1-Distill-Qwen-7B":
 		{
 			"vllmVersion":"v0.8.2",
-			"description":"DeepSeek-R1-Qwen-7B",
+			"description":"Qwen2.5-7B經知識蒸餾的推理模型",
 			"downloadUrl":"",
 			"size":"0",
 			"imagesSupport":0,
-			"reasoning":true,
+			"reasoning":false,
 			"launch":
 			{
 				"dtype":"half",
@@ -58,11 +58,11 @@
 	"DeepSeek-R1-Distill-Qwen-1.5B":
 		{
 			"vllmVersion":"v0.7.2",
-			"description":"DeepSeek-R1-Distill-Qwen-1.5B",
+			"description":"Qwen2.5-1.5B經知識蒸餾的推理模型",
 			"downloadUrl":"",
 			"size":"0",
 			"imagesSupport":0,
-			"reasoning":true,
+			"reasoning":false,
 			"launch":
 			{
 				"dtype":"float16",
@@ -78,7 +78,7 @@
 		"Llama-3.2-11B-Vision-Instruct":
 		{
 			"vllmVersion":"v0.8.0",
-			"description":"Meta's multimodal models",
+			"description":"Meta多模態模型，適用圖像推理問答",
 			"downloadUrl":"",
 			"size":"0",
 			"reasoning":false,

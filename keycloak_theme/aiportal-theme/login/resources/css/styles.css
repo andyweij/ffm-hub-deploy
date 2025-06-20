@@ -1,0 +1,464 @@
+:root {
+    --main-color: #2081c7;
+}
+
+.ait-logo {
+    float: left;
+    width: 221px;
+    margin-left: 33px;
+    padding: 10px 20px;
+    margin-top: 10px;
+}
+
+@media screen and (max-width: 767px) {
+    .ait-logo {
+        margin-left: 10px;
+    }
+    .container {
+        background-image: none !important;
+        flex-direction: column;
+        position: relative;
+        background-size: cover;
+    }
+}
+
+.center-container {
+    width: 373px;
+    padding-left: 50px;
+    padding-right: 50px;
+    padding-bottom: 35px;
+    padding-top: 35px;
+    border-radius: 8px;
+}
+
+.center-container-inner {
+    position: relative;
+    display: flex;
+    height: 100%;
+    width: 300px;
+}
+
+.center-container-inner-terms {
+    position: relative;
+    display: flex;
+    height: 100%;
+}
+
+/* 這裡用背景會有問題 原因再想想 */
+/* .container {
+    background-image: url(/img/background.png);
+    flex-direction: column;
+    position: relative;
+    background-size: cover;
+} */
+
+.subtitle {
+    margin-bottom: 34px;
+    margin-top: 20px;
+}
+
+.clean-all-text-button {
+    cursor: pointer;
+    position: absolute;
+    top: 30%;
+    right: 15%;
+}
+
+/* 只要有SVG想要hover時變為#2C58F5這個顏色就套用這個 */
+/* 要把pixel轉為filter格式可用 https://codepen.io/sosuke/pen/Pjoqqp */
+.svgHover:hover {
+    filter: invert(37%) sepia(76%) saturate(1683%) hue-rotate(149deg) brightness(95%) contrast(101%);
+} 
+
+.hide-password-button {
+    cursor: pointer;
+    position: absolute;
+    top: 30%;
+    right: 5%;
+    display: block;
+}
+
+.show-password-button {
+    cursor: pointer;
+    position: absolute;
+    top: 30%;
+    right: 5%;
+    display: none;
+}
+
+.my-footer {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    padding:20px 70px;
+    height: 90px;
+}
+
+.footer-link {
+    padding: 0px 10px;
+}
+
+.footer-rights {
+    margin-top: 16px;
+    font-size: 14px;
+}
+
+.start-using-buttom {
+    font-size: 14px;
+    color: white;
+    width: 148px !important;
+    height: 48px;
+}
+
+.terms-center-container {
+    margin-left: 10%;
+    width: 750px;
+}
+
+.fs-40 {
+    font-size: 40px;
+}
+
+.fs-48 {
+    font-size: 48px;
+}
+
+.fs-16 {
+    font-size: 16px
+}
+
+.locales:hover {
+    background-color: #E8E8E8;
+}
+
+.locales-drop {
+    padding-top: 8px;
+    padding-bottom: 8px;
+    transform: translateX(14px);
+    width: 160px;
+}
+
+.primary-button {
+    background-color: var(--main-color);
+    width: 315px;
+    color: #fff;
+    height: 52px !important; 
+    border-radius: 5px; 
+    margin-bottom:20px;
+    font-size: 1.0rem;
+    padding-top: 15px;
+}
+
+.primary-button:disabled {
+    background-color: #509dd4;
+}
+
+.show-passwords[type="password"] {
+    input-security: none;
+}
+
+input::-ms-reveal, input::-ms-clear {
+    display: none !important;
+}
+
+.header-locale {
+    margin-top: 6px;
+    transform: translateY(-7px);
+}
+
+.my-header {
+    position: absolute;
+    top: 0; width: 100%;
+    background: white;
+    height:70px;
+    vertical-align: middle;
+}
+
+.locale-buttom {
+    margin-top: 13px;
+    padding: 9px 10px;
+}
+
+.locale-buttom:hover {
+    margin-top: 13px;
+    background-color: #E8E8E8;
+    border-radius: 50px;
+    padding: 9px 10px;
+}
+
+.h-full {
+    height: 100%;
+}
+
+.h-40 {
+    height: 40px;
+}
+
+.w-full {
+    width: 100%;
+}
+
+.w-300 {
+    width:300px;
+}
+
+.w-fit {
+    width: fit-content;
+}
+
+.w-315 {
+    width:315px;
+}
+
+.bc-red {
+    border-color: #DE1135;
+    border-width: 2px;
+}
+
+.b-100 {
+    bottom: 100%;
+}
+
+.fw-b {
+    font-weight: bold;
+}
+
+.m-u {
+    margin: unset !important;
+}
+
+.mr-a {
+    margin-right: auto;
+}
+
+.mr-5 {
+    margin-right: 5px;
+}
+
+.ml-a {
+    margin-left: auto;
+}
+
+.mt-a {
+    margin-top: auto;
+}
+
+.mt-10 {
+    margin-top: 10px;
+}
+
+.mt-23 {
+    margin-top: 23px;
+}
+
+.mb-a {
+    margin-bottom: auto;
+}
+
+.pl-5 {
+    padding-left: 5px;
+}
+
+.pt-10 {
+    padding-top: 10px;
+}
+
+.pt-40 {
+    padding-top: 40px;
+}
+
+.pb-10 {
+    padding-bottom: 10px;
+}
+
+.fs-10 {
+    font-size: 10px;
+}
+
+.fs-12 {
+    font-size: 12px;
+}
+
+.fs-14 {
+    font-size: 14px;
+}
+
+.text-underline {
+    text-decoration-line: underline; 
+}
+
+.required-alert {
+    color: #DE1135;
+}
+
+.color-black {
+    color: #000000;
+}
+
+.f-l {
+    float: left;
+}
+
+.f-r {
+    float: right;
+}
+
+.d-f {
+    display: flex;
+}
+
+.d-g {
+    display: inline-grid;
+}
+
+.d-c {
+    display: contents;
+}
+
+/* 可以塞html的tooltip */
+.pwd-rule-tooltip {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s linear 0.3s;
+    position: absolute;
+    background-color: rgb(50 50 50 / 85%);
+    color: white;
+    margin-left: 194px;
+    margin-top: 26px;
+    border-radius: 4px;
+    width: 313px;
+    padding: 15px 10px 10px 10px;
+    font: normal normal normal 14px/1 FontAwesome;
+    z-index: 99999;
+  }
+.show-pwd-rule-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transition-delay: 0s;
+}
+
+.primary-input:focus {
+    border-color: var(--main-color);
+    border-width: 2px;
+    --tw-ring-color: unset;
+}
+
+.circle-check {
+    width: 20px;
+    height: 20px;
+    content: url('../img/circle_check.png');
+}
+
+.circle-alert {
+    width: 20px;
+    height: 20px;
+    content: url('../img/circle_alert.png');
+}
+
+.circle-warning {
+    width: 20px;
+    height: 20px;
+    content: url('../img/circle_warning.png');
+}
+
+.alert-block {
+    display: flex;
+    align-items: center;
+    padding: 8px 15px;
+    width: 100%;
+}
+
+.alert-block-logo {
+    margin-right: 11px;
+}
+
+.alert-green {
+    background-color: #CEEACE;
+    border-radius: 8px;
+}
+
+.alert-yellow {
+    background-color: #FFF6D3;
+    border-radius: 8px;
+}
+
+.alert-red {
+    background-color: #FFCDD2;
+    border-radius: 8px;
+}
+
+.terms-explain {
+    padding: 30px 0px;
+}
+
+.locales-registration {
+    float: right;
+    height: 50px;
+    /* width:180px; */
+    width: fit-content;
+    display: flex;
+    margin-top: 10px;
+    /* margin-right: 34px; */
+    margin-right: 58px;
+}
+
+.card-main {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.p-r {
+    position: relative;
+}
+
+.p-a {
+    position: absolute;
+}
+
+.v-h {
+    visibility: hidden;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.login-user {
+    width:100%;
+    display: flex;
+}
+
+.login-check-box {
+    display: flex;
+    /* justify-between: center; */
+    align-items: center;
+    gap: 43px;
+}
+
+.reset-pwd {
+    width:100%;
+    display: flex;
+}
+
+.login-opt-button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.login-config-totp-button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.link {
+    color: blue;
+    text-decoration: underline;
+    text-decoration: underline;
+}
