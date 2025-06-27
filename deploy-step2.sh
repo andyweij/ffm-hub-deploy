@@ -99,7 +99,7 @@ echo "$HARBOR_PASSWORD" | docker login "$HARBOR_REGISTRY" -u "$HARBOR_USERNAME" 
 
 # 啟動 Docker Compose
 echo "Starting Docker Compose..."
-docker compose -f "$COMPOSE_FILE" up -d || {
+docker compose -f "$COMPOSE_FILE" up -d --no-recreate|| {
     echo "Failed to start Docker Compose"
     exit 1
 }

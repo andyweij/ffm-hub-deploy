@@ -1,6 +1,6 @@
 services:
   aiportal:
-    image: 202.5.253.162:443/ffm-hub/aiportal:0.0.23
+    image: 202.5.253.162:443/ffm-hub/aiportal:0.0.28
     container_name: aiportal
     ports:
       - "443:8443"
@@ -57,6 +57,7 @@ services:
     container_name: ffm-hub-db
     volumes:
       - keycloak_db:/var/lib/postgresql/data
+      - ./config/init-multiple-dbs.sql:/docker-entrypoint-initdb.d/init-multiple-dbs.sql
     expose:
       - 5432
     ports:

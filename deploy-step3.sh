@@ -142,7 +142,7 @@ curl -k -s -X POST \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d "[{\"id\":\"${ROLE_ID}\",\"name\":\"${ROLE_NAME}\"}]" || { echo "Failed to map role $ROLE_NAME to user $NEW_USER"; exit 1; }
-
+echo "User $NEW_USER created and role $ROLE_NAME mapped successfully!"
 # 取得客戶端 ffm 的內部 ID
 echo "Retrieving client ID for $CLIENT_ID in realm $REALM_NAME..."
 CLIENT_RESPONSE=$(curl -k -s -X GET \
@@ -162,7 +162,43 @@ curl -k -s -X PUT \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{\"redirectUris\":[\"${LOCAL_VM_IP}\"]}" || { echo "Failed to update Valid Redirect URIs for client $CLIENT_ID"; exit 1; }
-
-echo "User $NEW_USER created and role $ROLE_NAME mapped successfully!"
 echo "Client $CLIENT_ID updated with Valid Redirect URI $LOCAL_VM_IP!"
-echo "Keycloak configuration completed!"
+
+
+# 更新 Realm 的登入主題
+echo "Updating login theme for realm $REALM_NAME to AIPORTAL-THEME..."
+REALM_CONFIG_RESPONSE=$(curl -k -s -X GET \
+  "${KEYCLOAK_URL}/admin/realms/${REALM_NAME}" \
+  -H "Authorization: Bearer $ACCESS_TOKEN")
+
+if [ -z "$REALM_CONFIG_RESPONSE" ] || [ "$REALM_CONFIG_RESPONSE" = "null" ]; then
+    echo "Failed to retrieve realm configuration for $REALM_NAME"
+    exit 1
+fi
+
+# 更新 loginTheme 欄位
+UPDATED_REALM_CONFIG=$(echo "$REALM_CONFIG_RESPONSE" | jq '.loginTheme = "aiportal-theme"')
+
+# PUT 更新 Realm 設定
+curl -k -s -X PUT \
+  "${KEYCLOAK_URL}/admin/realms/${REALM_NAME}" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "$UPDATED_REALM_CONFIG" || { echo "Failed to update login theme for realm $REALM_NAME"; exit 1; }
+
+echo "Login theme for realm $REALM_NAME set to AIPORTAL-THEME successfully!"
+
+# 設定 Realm 的語系
+echo "Updating realm $REALM_NAME with supported locales and default locale (zhtw)..."
+REALM_LOCALE_CONFIG=$(echo "$REALM_CONFIG_RESPONSE" | \
+  jq '.internationalizationEnabled = true | .supportedLocales = ["zhtw"] | .defaultLocale = "zhtw"')
+
+curl -k -s -X PUT \
+  "${KEYCLOAK_URL}/admin/realms/${REALM_NAME}" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "$REALM_LOCALE_CONFIG" || { echo "Failed to update locales for realm $REALM_NAME"; exit 1; }
+
+echo "Realm $REALM_NAME updated with supported locale and default locale set to zhtw."
+
+echo "Keycloak configuration is complete! Please try to visit https://${VM_IP}"
