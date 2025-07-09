@@ -38,8 +38,8 @@ source "$ENV_FILE"
 set +o allexport
 
 # 驗證環境變數
-if [ -z "$NEW_USER" ] || [ -z "$NEW_USER_PASSWORD" ] || [ -z "$REALM_NAME" ]; then
-    echo "$ENV_FILE no params NEW_USER or NEW_USER_PASSWORD or REALM_NAME"
+if [ -z "$NEW_USER" ] || [ -z "$NEW_USER_PASSWORD" ] || [ -z "$REALM_NAME" ] || [ -z "$VM_IP" ]; then
+    echo "$ENV_FILE no params NEW_USER or NEW_USER_PASSWORD or REALM_NAME or VM_IP"
     exit 1
 fi
 
@@ -163,6 +163,24 @@ curl -k -s -X PUT \
   -H "Content-Type: application/json" \
   -d "{\"redirectUris\":[\"${LOCAL_VM_IP}\"]}" || { echo "Failed to update Valid Redirect URIs for client $CLIENT_ID"; exit 1; }
 echo "Client $CLIENT_ID updated with Valid Redirect URI $LOCAL_VM_IP!"
+
+echo "Client $CLIENT_ID updated with Valid Redirect URI $LOCAL_VM_IP!"
+
+echo "Enabling Terms and Conditions required action for realm $REALM_NAME..."
+curl -k -s -X PUT \
+  "${KEYCLOAK_URL}/admin/realms/${REALM_NAME}/authentication/required-actions/TERMS_AND_CONDITIONS" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "alias": "TERMS_AND_CONDITIONS",
+        "name": "Terms and Conditions",
+        "providerId": "TERMS_AND_CONDITIONS",
+        "enabled": true,
+        "defaultAction": true,
+        "priority": 20, 
+		"config": {}
+  }' || { echo "Failed to enable Terms and Conditions"; exit 1; }
+echo "Terms and Conditions set as default action for new users."
 
 
 # 更新 Realm 的登入主題

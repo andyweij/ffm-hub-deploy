@@ -1,6 +1,6 @@
 services:
   aiportal:
-    image: 202.5.253.162:443/ffm-hub/aiportal:0.0.28
+    image: 202.5.253.162:443/ffm-hub/aiportal:1.0.2
     container_name: aiportal
     ports:
       - "443:8443"
@@ -23,7 +23,7 @@ services:
              keytool -importcert -trustcacerts -noprompt -alias api-relay -file /app/certs/certificate.crt -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit &&
              java -jar app.jar"
   api-relay:
-    image: 202.5.253.162:443/ffm-hub/api-relay:0.0.17
+    image: 202.5.253.162:443/ffm-hub/api-relay:0.0.18
     container_name: api-relay
     ports:
       - "8080:8443"
@@ -48,6 +48,7 @@ services:
       - KEYCLOAK_USERNAME=${NEW_USER}
       - KEYCLOAK_PASSWORD=${NEW_USER_PASSWORD}
       - MODEL_DIR=${MODEL_DIR}
+      - MODEL_LIST=${MODEL_LIST}
     command: >
       sh -c "keytool -delete -alias keycloak -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit || true &&
              keytool -importcert -trustcacerts -noprompt -alias keycloak -file /app/certs/certificate.crt -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit &&

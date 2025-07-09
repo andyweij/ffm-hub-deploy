@@ -11,3 +11,9 @@ docker rm aiportal
 docker stop keycloak
 
 docker rm keycloak
+
+docker stop ffm-hub-db
+
+docker rm ffm-hub-db
+
+docker volume rm deploy_keycloak_db

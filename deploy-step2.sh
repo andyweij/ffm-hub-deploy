@@ -12,6 +12,7 @@ COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yaml"
 DAEMON_JSON="/etc/docker/daemon.json"
 TEMP_JSON="/tmp/daemon.json.tmp"
 CERT_DIR="$SCRIPT_DIR/certs/"
+CURRENT_VM_IP=$(curl -s ifconfig.me)
 
 if [ ! -d "$CERT_DIR" ] || [ ! -f "$ENV_FILE" ]; then
     echo "請確認憑證目錄 ($CERT_DIR) 與 .env 檔案 ($ENV_FILE) 是否存在"
@@ -31,8 +32,29 @@ if [ -z "$HARBOR_USERNAME" ] || [ -z "$HARBOR_PASSWORD" ] || [ -z "$HARBOR_REGIS
     exit 1
 fi
 
-if [ -z "$S3_SECRET_KEY" ] || [ -z "$S3_ACCESS_KEY" ] ||  [ -z "$S3_END_POINT" ] || [ -z "$S3_BUCKET_NAME" ] || [ -z "$S3_PREFIX" ]; then
+if [ -z "$S3_SECRET_KEY" ] || [ -z "$S3_ACCESS_KEY" ] || [ -z "$S3_END_POINT" ] || [ -z "$S3_BUCKET_NAME" ] || [ -z "$S3_PREFIX" ]; then
     echo "$ENV_FILE s3 setting parameter may be empty"
+    exit 1
+fi
+
+if [ -z "$MODEL_LIST" ]; then
+    echo "$ENV_FILE model list setting parameter may be empty"
+    exit 1
+fi
+
+# 檢查 VM_IP 是否為空
+if [ -z "$VM_IP" ]; then
+    echo "VM_IP is not set in the .env file."
+    exit 1
+fi
+
+# 比對 IP
+if [ "$CURRENT_VM_IP" = "$VM_IP" ]; then
+    echo "IP 相同：$CURRENT_VM_IP"
+else
+    echo "IP 不相同"
+    echo "CURRENT_VM_IP: $CURRENT_VM_IP"
+    echo "VM_IP from ENV: $VM_IP"
     exit 1
 fi
 
@@ -105,14 +127,14 @@ docker compose -f "$COMPOSE_FILE" up -d --no-recreate|| {
 }
 
 # 執行 deploy-step3.sh
-echo "Executing deploy-step3.sh..."
-STEP3_SCRIPT="$SCRIPT_DIR/deploy-step3.sh"
-if [ ! -f "$STEP3_SCRIPT" ]; then
-    echo "Can't find deploy-step3.sh file: $STEP3_SCRIPT"
+echo "Executing init-keycloak.sh..."
+INIT_KEYCLOAK="$SCRIPT_DIR/init-keycloak.sh"
+if [ ! -f "$INIT_KEYCLOAK" ]; then
+    echo "Can't find init-keycloak.sh file: $INIT_KEYCLOAK"
     exit 1
 fi
-bash "$STEP3_SCRIPT" || {
-    echo "Failed to execute deploy-step3.sh"
+bash "$INIT_KEYCLOAK" || {
+    echo "Failed to execute init-keycloak.sh"
     exit 1
 }
 

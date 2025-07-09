@@ -5,7 +5,7 @@
 <#assign realmName=url.loginUrl?split('/')[2]>
 
 <@layout.registrationLayout displayMessage=false; section>
-    <body onload="termsPageStyleChange('url(${url.resourcesPath}/img/background-start-using.png)');">
+    <body onload="termsPageStyleChange('url(${url.resourcesPath}/img/background-start-using.jpg)');">
         <#if section = "header">
             ${msg("termsTitle")}
         <#elseif section = "form">
@@ -13,8 +13,11 @@
             ${kcSanitize(msg("termsText"))?no_esc} 
             ${msg("termsExplain", realmName)?no_esc}
         </div>
+        <div class="custom-terms-box">
+            ${kcSanitize(msg("termsContent"))?no_esc}
+        </div>
         <form class="form-actions d-c" action="${url.loginAction}" method="POST">
-            <button type="submit" class="mt-a mb-a mr-a primary-button rounded-lg start-using-buttom ${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonLargeClass!}">${msg("termsAccept")}</button>
+            <button type="submit" class="p-t-u mt-a mb-a mr-a primary-button rounded-lg start-using-buttom ${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonLargeClass!}">${msg("termsAccept")}</button>
         </form>
         <@linkSecondary.kw href=url.loginUrl linkClass="d-c">
             <span class="mr-a text-underline fs-12 mt-10">${msg("termsDecline")}</span>

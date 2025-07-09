@@ -67,7 +67,7 @@
 /* 只要有SVG想要hover時變為#2C58F5這個顏色就套用這個 */
 /* 要把pixel轉為filter格式可用 https://codepen.io/sosuke/pen/Pjoqqp */
 .svgHover:hover {
-    filter: invert(37%) sepia(76%) saturate(1683%) hue-rotate(149deg) brightness(95%) contrast(101%);
+    filter: invert(69%) sepia(28%) saturate(4583%) hue-rotate(179deg) brightness(96%) contrast(103%);
 } 
 
 .hide-password-button {
@@ -121,6 +121,10 @@
 
 .fs-48 {
     font-size: 48px;
+}
+
+.fs-18 {
+    font-size: 18px;
 }
 
 .fs-16 {
@@ -388,7 +392,7 @@ input::-ms-reveal, input::-ms-clear {
 }
 
 .terms-explain {
-    padding: 30px 0px;
+    padding: 30px 0px 0px 0px;
 }
 
 .locales-registration {
@@ -460,5 +464,76 @@ input::-ms-reveal, input::-ms-clear {
 .link {
     color: blue;
     text-decoration: underline;
+}
+
+.custom-terms-box {
+    width: 50vw;
+    height: 15vw;
+    overflow-y: auto;
+    /* border: 1px solid #ccc; */
+    border-radius: 5px;
+    padding: 10px;
+    margin: 10px 0px;
+    background-color: #ffffff;
+    font-size: 14px;
+    color: #333;
+    margin-left: 0;
+    align-self: flex-start;
+    padding: 40px;
+}
+
+/* 滾軸樣式（適用於 Webkit 瀏覽器，如 Chrome、Safari） */
+.custom-terms-box::-webkit-scrollbar {
+    width: 8px;
+}
+
+.custom-terms-box::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.custom-terms-box::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.custom-terms-box::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* 確保 HTML 內容的樣式 */
+.custom-terms-box h3 {
+    margin: 0 0 10px;
+    font-size: 16px;
+    color: #444;
+}
+
+.custom-terms-box p {
+    margin: 5px 0;
+}
+
+.custom-terms-box ul {
+    margin: 5px 0 10px 20px;
+    padding: 0;
+}
+
+.custom-terms-box li {
+    margin-bottom: 5px;
+}
+
+.custom-terms-box a {
+    color: #0066cc;
     text-decoration: underline;
+}
+
+.custom-terms-box a:hover {
+    color: #003366;
+}
+
+.p-t-u {
+    padding-top: unset
+}
+
+ol {
+    list-style-type: decimal !important;
 }
