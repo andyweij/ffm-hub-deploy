@@ -1,6 +1,6 @@
 services:
   aiportal:
-    image: 202.5.253.162:443/ffm-hub/aiportal:1.0.2
+    image: 202.5.253.162:443/ffm-hub/aiportal:1.0.5
     container_name: aiportal
     ports:
       - "443:8443"
@@ -23,7 +23,7 @@ services:
              keytool -importcert -trustcacerts -noprompt -alias api-relay -file /app/certs/certificate.crt -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit &&
              java -jar app.jar"
   api-relay:
-    image: 202.5.253.162:443/ffm-hub/api-relay:0.0.18
+    image: 202.5.253.162:443/ffm-hub/api-relay:0.0.19
     container_name: api-relay
     ports:
       - "8080:8443"
@@ -90,6 +90,32 @@ services:
       - KC_DB_PASSWORD=keycloak
       - KC_DB_URL=jdbc:postgresql://postgres:5432/keycloak
     command: start-dev --import-realm
-
+    
+  prometheus:
+    image: prom/prometheus:latest
+    extra_hosts:
+      - "host.docker.internal:host-gateway"     # allow a direct connection from container to the local machine
+    ports:
+      - "9090:9090"   # the default port used by Prometheus
+    volumes:
+      - ./config/prometheus.yaml:/etc/prometheus/prometheus.yml # mount Prometheus config file
+      - prometheus_data:/prometheus
+      
+  grafana:
+    image: grafana/grafana:latest
+    depends_on:
+      - prometheus
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./config/grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./config/grafana/dashboards:/etc/grafana/dashboards
+      - ./config/grafana/dashboards/dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      
 volumes:
   keycloak_db:
+  prometheus_data:

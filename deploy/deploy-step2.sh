@@ -2,8 +2,13 @@
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="$SCRIPT_DIR/config/.env"
-# 日誌設置
-LOG_FILE="$SCRIPT_DIR/deploy-step2.log"
+# 日誌資料夾與檔案設定
+LOG_DIR="$SCRIPT_DIR/logs"
+LOG_FILE="$LOG_DIR/deploy-step2.log"
+
+# 若 logs 資料夾不存在，則建立
+mkdir -p "$LOG_DIR"
+
 exec > >(tee -a "$LOG_FILE") 2>&1
 echo "Starting deploy step2 : $(date)"
 
@@ -52,10 +57,22 @@ fi
 if [ "$CURRENT_VM_IP" = "$VM_IP" ]; then
     echo "IP 相同：$CURRENT_VM_IP"
 else
-    echo "IP 不相同"
+    echo "IP 不相同，準備更新 .env 中的 VM_IP"
     echo "CURRENT_VM_IP: $CURRENT_VM_IP"
     echo "VM_IP from ENV: $VM_IP"
-    exit 1
+
+    if grep -q "^VM_IP=" "$ENV_FILE"; then
+        sed -i "s/^VM_IP=.*/VM_IP=$CURRENT_VM_IP/" "$ENV_FILE"
+        echo "已更新 .env 中的 VM_IP 為：$CURRENT_VM_IP"
+    else
+        echo "VM_IP=$CURRENT_VM_IP" >> "$ENV_FILE"
+        echo "已新增 VM_IP 至 .env：$CURRENT_VM_IP"
+    fi
+
+    # 重新載入 .env（以使用新 IP）
+    set -o allexport
+    source "$ENV_FILE"
+    set +o allexport
 fi
 
 # 等待 Docker 服務啟動
