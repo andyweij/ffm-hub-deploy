@@ -143,7 +143,7 @@ docker compose -f "$COMPOSE_FILE" up -d --no-recreate|| {
     exit 1
 }
 
-# 執行 deploy-step3.sh
+# 初始化keycloak；執行init-keycloak.sh
 echo "Executing init-keycloak.sh..."
 INIT_KEYCLOAK="$SCRIPT_DIR/init-keycloak.sh"
 if [ ! -f "$INIT_KEYCLOAK" ]; then

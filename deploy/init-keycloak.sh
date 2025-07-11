@@ -59,7 +59,7 @@ until curl -k -s -f "http://localhost:8443/q/health/live" >/dev/null; do
         docker logs "$KEYCLOAK_CONTAINER"
         exit 1
     fi
-    sleep 5
+    sleep 10
     WAIT_COUNT=$((WAIT_COUNT + 2))
     if [ $WAIT_COUNT -ge $MAX_WAIT ]; then
         echo "Keycloak health check timed out"
@@ -90,13 +90,40 @@ if [ -z "$ACCESS_TOKEN" ] || [ "$ACCESS_TOKEN" = "null" ]; then
     exit 1
 fi
 
+# TERMS_AND_CONDITIONS
+echo "Enabling Terms and Conditions required action for realm $REALM_NAME..."
+curl -k -s -X PUT \
+  "${KEYCLOAK_URL}/admin/realms/${REALM_NAME}/authentication/required-actions/TERMS_AND_CONDITIONS" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "alias": "TERMS_AND_CONDITIONS",
+        "name": "Terms and Conditions",
+        "providerId": "TERMS_AND_CONDITIONS",
+        "enabled": true,
+        "defaultAction": true,
+        "priority": 20, 
+		"config": {}
+  }' || { echo "Failed to enable Terms and Conditions"; exit 1; }
+echo "Terms and Conditions set as default action for new users."
+
 # 創建用戶
 echo "Creating new user $NEW_USER in realm $REALM_NAME..."
+
+USER_PAYLOAD=$(cat <<EOF
+{
+  "username": "${NEW_USER}",
+  "enabled": true,
+  "requiredActions": ["terms_and_conditions"]
+}
+EOF
+)
+
 CREATE_USER_RESPONSE=$(curl -k -s -X POST \
   "${KEYCLOAK_URL}/admin/realms/${REALM_NAME}/users" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"${NEW_USER}\",\"enabled\":true}")
+  -d "$USER_PAYLOAD")
 
 if [ $? -ne 0 ]; then
     echo "Failed to create user $NEW_USER"
@@ -165,23 +192,6 @@ curl -k -s -X PUT \
 echo "Client $CLIENT_ID updated with Valid Redirect URI $LOCAL_VM_IP!"
 
 echo "Client $CLIENT_ID updated with Valid Redirect URI $LOCAL_VM_IP!"
-
-echo "Enabling Terms and Conditions required action for realm $REALM_NAME..."
-curl -k -s -X PUT \
-  "${KEYCLOAK_URL}/admin/realms/${REALM_NAME}/authentication/required-actions/TERMS_AND_CONDITIONS" \
-  -H "Authorization: Bearer $ACCESS_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-        "alias": "TERMS_AND_CONDITIONS",
-        "name": "Terms and Conditions",
-        "providerId": "TERMS_AND_CONDITIONS",
-        "enabled": true,
-        "defaultAction": true,
-        "priority": 20, 
-		"config": {}
-  }' || { echo "Failed to enable Terms and Conditions"; exit 1; }
-echo "Terms and Conditions set as default action for new users."
-
 
 # 更新 Realm 的登入主題
 echo "Updating login theme for realm $REALM_NAME to AIPORTAL-THEME..."
