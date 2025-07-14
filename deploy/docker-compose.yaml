@@ -1,6 +1,6 @@
 services:
   aiportal:
-    image: 202.5.253.162:443/ffm-hub/aiportal:1.0.5
+    image: 202.5.253.162:443/ffm-hub/aiportal:1.0.7
     container_name: aiportal
     ports:
       - "443:8443"
@@ -22,8 +22,10 @@ services:
       sh -c "keytool -delete -alias api-relay -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit || true &&
              keytool -importcert -trustcacerts -noprompt -alias api-relay -file /app/certs/certificate.crt -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit &&
              java -jar app.jar"
+    networks:
+      - ffm-hub-network
   api-relay:
-    image: 202.5.253.162:443/ffm-hub/api-relay:0.0.19
+    image: 202.5.253.162:443/ffm-hub/api-relay:0.0.20
     container_name: api-relay
     ports:
       - "8080:8443"
@@ -53,6 +55,8 @@ services:
       sh -c "keytool -delete -alias keycloak -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit || true &&
              keytool -importcert -trustcacerts -noprompt -alias keycloak -file /app/certs/certificate.crt -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit &&
              java -jar app.jar"
+    networks:
+      - ffm-hub-network
   postgres:
     image: postgres:latest
     container_name: ffm-hub-db
@@ -67,6 +71,8 @@ services:
       - POSTGRES_DB=keycloak
       - POSTGRES_USER=keycloak
       - POSTGRES_PASSWORD=keycloak
+    networks:
+      - ffm-hub-network
   keycloak:
     image: quay.io/keycloak/keycloak:26.2.0
     container_name: keycloak
@@ -90,9 +96,11 @@ services:
       - KC_DB_PASSWORD=keycloak
       - KC_DB_URL=jdbc:postgresql://postgres:5432/keycloak
     command: start-dev --import-realm
-    
+    networks:
+      - ffm-hub-network
   prometheus:
     image: prom/prometheus:latest
+    container_name: ffm-hub-prometheus
     extra_hosts:
       - "host.docker.internal:host-gateway"     # allow a direct connection from container to the local machine
     ports:
@@ -100,9 +108,11 @@ services:
     volumes:
       - ./config/prometheus.yaml:/etc/prometheus/prometheus.yml # mount Prometheus config file
       - prometheus_data:/prometheus
-      
+    networks:
+      - ffm-hub-network
   grafana:
     image: grafana/grafana:latest
+    container_name: ffm-hub-grafana
     depends_on:
       - prometheus
     ports:
@@ -115,7 +125,13 @@ services:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
-      
+    networks:
+      - ffm-hub-network
 volumes:
   keycloak_db:
   prometheus_data:
+  
+networks:
+  ffm-hub-network:
+    name: ffm-hub-network
+    driver: bridge

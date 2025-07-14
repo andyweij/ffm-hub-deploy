@@ -10,9 +10,9 @@ LOG_DIR="$SCRIPT_DIR/logs"
 LOG_FILE="$LOG_DIR/deploy_nvidia_docker.log"
 
 # 若 logs 資料夾不存在，則建立
-mkdir -p "$LOG_DIR"
-
-exec > >(tee -a "$LOG_FILE") 2>&1
+sudo mkdir -p "$LOG_DIR"
+sudo chmod 775 -R "$LOG_DIR"
+exec > >(sudo tee -a "$LOG_FILE") 2>&1
 echo "Starting deployment script : $(date)"
 
 # 安裝紀錄
@@ -154,7 +154,7 @@ if [ ${#INSTALLED[@]} -gt 0 ]; then
     for item in "${INSTALLED[@]}"; do
         echo "  - $item"
     done
-	printf "%s\n" "${INSTALLED[@]}" > "$SCRIPT_DIR/logs/deploy_installed.log"
+	printf "%s\n" "${INSTALLED[@]}" | sudo tee "$SCRIPT_DIR/logs/deploy_installed.log" > /dev/null
 fi
 
 if [ ${#SKIPPED[@]} -gt 0 ]; then

@@ -7,9 +7,9 @@ LOG_DIR="$SCRIPT_DIR/logs"
 LOG_FILE="$LOG_DIR/deploy-step2.log"
 
 # 若 logs 資料夾不存在，則建立
-mkdir -p "$LOG_DIR"
-
-exec > >(tee -a "$LOG_FILE") 2>&1
+sudo mkdir -p "$LOG_DIR"
+sudo chmod 775 -R "$LOG_DIR"
+exec > >(sudo tee -a "$LOG_FILE") 2>&1
 echo "Starting deploy step2 : $(date)"
 
 # 變數定義

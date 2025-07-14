@@ -10,7 +10,7 @@ INSTALLED_LOG="$LOG_DIR/deploy_installed.log"
 REMOVED_LOG="$LOG_DIR/uninstall_removed.log"
 
 
-exec > >(tee -a "$LOG_FILE") 2>&1
+exec > >(sudo tee -a "$LOG_FILE") 2>&1
 echo "Starting uninstall script : $(date)"
 
 if [ ! -f "$INSTALLED_LOG" ]; then
@@ -32,10 +32,10 @@ function was_installed_by_us() {
 
 # NVIDIA Container Toolkit
 if was_installed_by_us "NVIDIA Container Toolkit"; then
+
     echo "Removing NVIDIA Container Toolkit..."
-    sudo apt-get remove -y nvidia-container-toolkit
-    sudo rm -f /etc/apt/sources.list.d/nvidia-container-toolkit.list
-    sudo rm -f /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+	sudo apt-get purge -y nvidia-container-toolkit
+	sudo apt-get autoremove -y
     REMOVED+=("NVIDIA Container Toolkit")
 fi
 
@@ -84,7 +84,7 @@ if [ ${#REMOVED[@]} -gt 0 ]; then
     for item in "${REMOVED[@]}"; do
         echo "  - $item"
     done
-    printf "%s\n" "${REMOVED[@]}" > "$REMOVED_LOG"
+    printf "%s\n" "${REMOVED[@]}" | sudo tee "$REMOVED_LOG" > /dev/null
 else
     echo "沒有移除任何項目。"
 fi
