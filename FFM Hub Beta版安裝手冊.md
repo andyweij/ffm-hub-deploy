@@ -27,8 +27,14 @@ title: FFM Hub Beta版安裝手冊
 ---
 
 ## 安裝方式
-0. 架設完成Ubuntu 22.04 伺服器
-1. 將壓縮檔解壓縮至要部署的設備上
+1. 架設完成Ubuntu 22.04 伺服器，並將S3_secret.txt與壓縮檔放至要安裝的目錄
+*  若Linux系統無解壓縮工具，請繼續第2點
+![image](https://hackmd.io/_uploads/SJzHLtmUgg.png)
+
+
+*  若直接將S3_secret.txt與解壓縮後的資料夾放至目錄，請跳到第4點
+
+
 2. 若Linux系統無解壓縮工具需再另外安裝，安裝指令如下
 ```bash
 sudo apt install unzip
@@ -37,7 +43,7 @@ sudo apt install unzip
 
 3. 解壓縮installer
 ```bash
-unzip "ffm-hub-installer.zip" -d .
+unzip "ffm-hub-installer-vx.y.z.zip" -d .
 ```
 ![image](https://hackmd.io/_uploads/SkmFoEMUel.png)
 
@@ -45,62 +51,36 @@ unzip "ffm-hub-installer.zip" -d .
 ```bash
 sudo chmod 775 -R ffm-hub-installer/ 
 ```
-5. 切換至目錄config
+5. 更新設置.env
 ```bash
-cd ${解壓縮ffm-hub-installer目錄路徑}/ffm-hub-installer/deploy/config
+{ echo ""; cat ${S3_secret放置路徑}/S3_secret.txt; } >> ${解壓縮ffm-hub-installer目錄路徑}/ffm-hub-installer/deploy/config/.env
+ 
 ```
-6. 更新設置.env
-```bash
-sudo vim .env
-```
-* 設置.env設定檔
-    1. Insert(鍵盤按鍵)
-    2. 依序 Shift + Insert (貼上)
-    3. 完成後 Esc
-    4. :wq (儲存退出)
-
-初始
-```
-S3_SECRET_KEY=
-S3_ACCESS_KEY=
-S3_END_POINT=
-S3_BUCKET_NAME=
-S3_PREFIX=
-```
-加入S3設置
-```bash
-S3_SECRET_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-S3_ACCESS_KEY=xxxxxxxxxxxxxxxxxxx
-S3_END_POINT=https://xxx.xxxx.xx/
-S3_BUCKET_NAME=xxxxxxxxxx
-S3_PREFIX=xxxxxxxxxx
-```
-
-7. 切換至目錄deploy
+6. 切換至目錄deploy
 ```bash
 cd ${解壓縮ffm-hub-installer目錄路徑}/ffm-hub-installer/deploy/
 ```
-8. 執行部署步驟1(安裝相關需求依賴)
+7. 執行部署步驟1(安裝相關需求依賴)
 ```bash
 ./deploy-step1.sh
 ```
 ![image](https://hackmd.io/_uploads/S1VTbpoHxx.png)
-9. 安裝結束，等待系統重啟。
-10. 切換至目錄deploy
+8. 安裝結束，等待系統重啟。
+9. 切換至目錄deploy
 ```bash
 cd ${解壓縮ffm-hub-installer目錄路徑}/ffm-hub-installer/deploy/ 
 ```
-11. 建立服務自簽憑證
+10. 建立服務自簽憑證
 ```bash
 ./gen-all-cert.sh
 ```
 ![image](https://hackmd.io/_uploads/Hy-9mpjSex.png)
 
-12. 執行部屬步驟2
+11. 執行部屬步驟2
 ```bash
 ./deploy-step2.sh 
 ```
-13. 自動初始化keycloak(init-keycloak.sh)；完成後會看到以下訊息，並複製網址即可開網頁測試。
+12. 自動初始化keycloak(init-keycloak.sh)；完成後會看到以下訊息，並複製網址即可開網頁測試。
 ![image](https://hackmd.io/_uploads/SJAHQajSlx.png)
 
 
@@ -130,5 +110,5 @@ cd ${解壓縮ffm-hub-installer目錄路徑}/ffm-hub-installer/deploy/
 ```
 ![image](https://hackmd.io/_uploads/BywiKLGIxl.png)
 ## 常見問題
-- harbor下載IMAGE失敗，直接重新再執行一次步驟12
-- keycloak執行步驟3出錯，請手動執行步驟13
+- harbor下載IMAGE失敗，直接重新再執行一次步驟11
+- keycloak執行步驟3出錯，請手動執行步驟12

@@ -7,8 +7,8 @@ declare -A IMAGE_TO_CONTAINER_NAMES=(
   ["ffm-hub/aiportal"]="aiportal"
   ["keycloak"]="keycloak"
   ["postgres"]="ffm-hub-db"
-  ["prom/prometheus"]="deploy-prometheus-1"
-  ["grafana/grafana"]="deploy-grafana-1"
+  ["prom/prometheus"]="ffm-hub-prometheus"
+  ["grafana/grafana"]="ffm-hub-grafana"
 )
 
 # 保護模組 image（刪除失敗就跳過）
