@@ -10,9 +10,9 @@ LOG_DIR="$SCRIPT_DIR/logs"
 LOG_FILE="$LOG_DIR/deploy_nvidia_docker.log"
 
 # 若 logs 資料夾不存在，則建立
-sudo mkdir -p "$LOG_DIR"
-sudo chmod 775 -R "$LOG_DIR"
-exec > >(sudo tee -a "$LOG_FILE") 2>&1
+mkdir -p "$LOG_DIR"
+
+exec > >(tee -a "$LOG_FILE") 2>&1
 echo "Starting deployment script : $(date)"
 
 # 安裝紀錄
@@ -154,7 +154,7 @@ if [ ${#INSTALLED[@]} -gt 0 ]; then
     for item in "${INSTALLED[@]}"; do
         echo "  - $item"
     done
-	printf "%s\n" "${INSTALLED[@]}" | sudo tee "$SCRIPT_DIR/logs/deploy_installed.log" > /dev/null
+	printf "%s\n" "${INSTALLED[@]}" | tee "$SCRIPT_DIR/logs/deploy_installed.log" > /dev/null
 fi
 
 if [ ${#SKIPPED[@]} -gt 0 ]; then
@@ -168,6 +168,34 @@ echo "--------------------------------------------------"
 # 只有當有安裝新套件時才重啟
 if [ ${#INSTALLED[@]} -gt 0 ]; then
     echo "Rebooting system to complete installation..."
+		echo "正在設定開機自動執行 deploy-step2.sh..."
+		SERVICE_FILE_CONTENT="[Unit]
+		Description=Run Second Step of Deployment After Reboot
+		After=network-online.target docker.service
+		Wants=network-online.target docker.service
+
+		[Service]
+		Type=oneshot
+		User=$(whoami)
+		WorkingDirectory=${SCRIPT_DIR}
+		TimeoutStartSec=600
+		ExecStart=${SCRIPT_DIR}/deploy-step2.sh
+
+		[Install]
+		WantedBy=multi-user.target"
+
+		echo "正在動態產生 systemd 服務設定檔..."
+		# 將上面定義的內容寫入到 /etc/systemd/system/deploy-step2.service
+		# 使用 sudo tee 可以解決權限問題
+		echo "$SERVICE_FILE_CONTENT" | sudo tee /etc/systemd/system/deploy-step2.service > /dev/null
+
+    # 2. 重新載入 systemd，讓它讀取到新的服務設定
+    sudo systemctl daemon-reload
+
+    # 3. 啟用我們的服務，讓它在下次開機時自動執行
+    sudo systemctl enable deploy-step2.service
+    # ▲▲▲ 改造結束 ▲▲▲
+
     sleep 5
     sudo systemctl reboot
 else

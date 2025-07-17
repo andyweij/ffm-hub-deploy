@@ -18,11 +18,11 @@ docker rm ffm-hub-db
 
 docker volume rm deploy_keycloak_db
 
-docker stop deploy-prometheus-1
+docker stop ffm-hub-prometheus
 
-docker rm deploy-prometheus-1
+docker rm ffm-hub-prometheus
 
-docker stop deploy-grafana-1
+docker stop ffm-hub-grafana
 
-docker rm deploy-grafana-1
+docker rm ffm-hub-grafana
 

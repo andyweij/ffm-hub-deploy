@@ -10,7 +10,7 @@ INSTALLED_LOG="$LOG_DIR/deploy_installed.log"
 REMOVED_LOG="$LOG_DIR/uninstall_removed.log"
 
 
-exec > >(sudo tee -a "$LOG_FILE") 2>&1
+exec > >(tee -a "$LOG_FILE") 2>&1
 echo "Starting uninstall script : $(date)"
 
 if [ ! -f "$INSTALLED_LOG" ]; then
@@ -35,6 +35,14 @@ if was_installed_by_us "NVIDIA Container Toolkit"; then
 
     echo "Removing NVIDIA Container Toolkit..."
 	sudo apt-get purge -y nvidia-container-toolkit
+	# 2. 【關鍵】刪除安裝時新增的 APT 軟體庫設定檔
+	echo "Removing NVIDIA Container Toolkit APT source list..."
+	sudo rm -f /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
+	# 3. 【關鍵】刪除安裝時新增的 GPG 金鑰
+	echo "Removing NVIDIA Container Toolkit GPG key..."
+	sudo rm -f /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+
 	sudo apt-get autoremove -y
     REMOVED+=("NVIDIA Container Toolkit")
 fi
@@ -75,6 +83,31 @@ if was_installed_by_us "Add user to docker group"; then
     sudo gpasswd -d "$USER" docker
     REMOVED+=("Remove user from docker group")
 fi
+
+# 將要刪除的目標路徑存成變數，方便管理且不易出錯
+TARGET_DIR="/opt/vllm-models"
+
+# 首先，使用 -d 判斷目標路徑是否存在且是一個資料夾
+if [ -d "$TARGET_DIR" ]; then
+    echo "發現目標資料夾 ${TARGET_DIR}，正在嘗試刪除..."
+    
+    # 執行刪除
+    sudo rm -R "$TARGET_DIR"
+    
+    # 檢查刪除操作的返回碼
+    if [ $? -eq 0 ]; then
+        echo "成功刪除資料夾: ${TARGET_DIR}"
+    else
+        echo "錯誤：刪除資料夾 ${TARGET_DIR} 失敗。請檢查權限或錯誤訊息。"
+        exit 1
+    fi
+else
+    # 如果資料夾一開始就不存在
+    echo "目標資料夾 ${TARGET_DIR} 本來就不存在，無需執行刪除操作。"
+fi
+
+# 如果程式能走到這裡，代表最終狀態是成功的 (資料夾已不存在)
+echo "操作完成。"
 
 # 結尾輸出
 echo "--------------------------------------------------"

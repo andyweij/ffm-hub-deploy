@@ -1,6 +1,6 @@
 services:
   aiportal:
-    image: 202.5.253.162:443/ffm-hub/aiportal:1.0.7
+    image: 202.5.253.162:443/ffm-hub/aiportal:1.0.8
     container_name: aiportal
     ports:
       - "443:8443"
@@ -9,7 +9,7 @@ services:
       - ./certs/api-relay/certificate.crt:/app/certs/certificate.crt
     environment:
       - SPRING_PROFILES_ACTIVE=stage
-      - APIMODULE_URL=https://${VM_IP}:8080
+      - APIMODULE_URL=https://api-relay:8443
       - FRONTEND_KEYCLOAK_URL=https://${VM_IP}:8443
       - FRONTEND_KEYCLOAK_REALM=ffm-realm
       - FRONTEND_KEYCLOAK_CLIENTID=ffm
@@ -25,7 +25,7 @@ services:
     networks:
       - ffm-hub-network
   api-relay:
-    image: 202.5.253.162:443/ffm-hub/api-relay:0.0.20
+    image: 202.5.253.162:443/ffm-hub/api-relay:0.0.21
     container_name: api-relay
     ports:
       - "8080:8443"
@@ -34,6 +34,7 @@ services:
       - /opt/${MODEL_DIR}:/opt/${MODEL_DIR}
       - ./certs/api-relay/keystore.p12:/app/certs/keystore.p12
       - ./certs/keycloak/certificate.crt:/app/certs/certificate.crt
+      - ./util/wait-for-it.sh:/app/wait-for-it.sh
     environment:
       - KEYCLOAK_SERVER_URL=https://${VM_IP}:8443
       - VLLM_HOST=${VM_IP}
@@ -52,9 +53,12 @@ services:
       - MODEL_DIR=${MODEL_DIR}
       - MODEL_LIST=${MODEL_LIST}
     command: >
-      sh -c "keytool -delete -alias keycloak -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit || true &&
-             keytool -importcert -trustcacerts -noprompt -alias keycloak -file /app/certs/certificate.crt -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit &&
-             java -jar app.jar"
+      sh -c "
+        chmod +x /app/wait-for-it.sh &&
+        /app/wait-for-it.sh ffm-hub-db:5432 --timeout=60 --strict -- echo 'Postgres is ready' &&
+        keytool -delete -alias keycloak -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit || true &&
+        keytool -importcert -trustcacerts -noprompt -alias keycloak -file /app/certs/certificate.crt -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit &&
+        java -jar app.jar"
     networks:
       - ffm-hub-network
   postgres:

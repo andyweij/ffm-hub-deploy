@@ -2,6 +2,8 @@
 
 # 變數定義
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOG_DIR="$SCRIPT_DIR/logs"
+LOG_FILE="$LOG_DIR/init-keycloak.log"
 ENV_FILE="$SCRIPT_DIR/config/.env"
 LOCAL_VM_IP=$(curl -s ifconfig.me)
 KEYCLOAK_CONTAINER="keycloak"
@@ -11,6 +13,7 @@ ADMIN_USERNAME="admin"
 ADMIN_PASSWORD="admin"
 CLIENT_ID="ffm"
 
+exec > >(tee -a "$LOG_FILE") 2>&1
 # 動態取得 VM IP
 if [ -n "$LOCAL_VM_IP" ]; then
     VM_IP="$LOCAL_VM_IP"
