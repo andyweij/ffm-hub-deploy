@@ -12,17 +12,17 @@ docker stop keycloak
 
 docker rm keycloak
 
-docker stop ffm-hub-db
+docker stop afs-hub-db
 
-docker rm ffm-hub-db
+docker rm afs-hub-db
 
 docker volume rm deploy_keycloak_db
 
-docker stop ffm-hub-prometheus
+docker stop afs-hub-prometheus
 
-docker rm ffm-hub-prometheus
+docker rm afs-hub-prometheus
 
-docker stop ffm-hub-grafana
+docker stop afs-hub-grafana
 
-docker rm ffm-hub-grafana
+docker rm afs-hub-grafana
 

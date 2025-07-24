@@ -2,10 +2,11 @@
 
 # 變數定義
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LOG_DIR="$SCRIPT_DIR/logs"
+PROJECT_ROOT=$(dirname "$SCRIPT_DIR")
+LOG_DIR="$PROJECT_ROOT/logs"
 LOG_FILE="$LOG_DIR/init-keycloak.log"
-ENV_FILE="$SCRIPT_DIR/config/.env"
-LOCAL_VM_IP=$(curl -s ifconfig.me)
+ENV_FILE="$PROJECT_ROOT/.env"
+
 KEYCLOAK_CONTAINER="keycloak"
 KEYCLOAK_URL="https://0.0.0.0:8443"
 ROLE_NAME="admin"
@@ -14,19 +15,6 @@ ADMIN_PASSWORD="admin"
 CLIENT_ID="ffm"
 
 exec > >(tee -a "$LOG_FILE") 2>&1
-# 動態取得 VM IP
-if [ -n "$LOCAL_VM_IP" ]; then
-    VM_IP="$LOCAL_VM_IP"
-else
-    VM_IP=$(ip addr show | grep -oP 'inet \K[\d.]+(?=/.*eth0)' | head -1 || hostname -I | awk '{print $1}')
-fi
-
-if [ -z "$VM_IP" ]; then
-    echo "Error: Could not determine VM IP address. Please set LOCAL_VM_IP environment variable."
-    exit 1
-fi
-
-LOCAL_VM_IP="https://${VM_IP}/*"
 
 if [ ! -f "$ENV_FILE" ]; then
     echo "未找到 .env 檔案: $ENV_FILE"
@@ -39,6 +27,9 @@ sed -i -e 's/\r$//' $ENV_FILE
 set -o allexport
 source "$ENV_FILE"
 set +o allexport
+
+LOCAL_VM_IP="https://${VM_IP}/*"
+
 
 # 驗證環境變數
 if [ -z "$NEW_USER" ] || [ -z "$NEW_USER_PASSWORD" ] || [ -z "$REALM_NAME" ] || [ -z "$VM_IP" ]; then
@@ -233,3 +224,13 @@ curl -k -s -X PUT \
 echo "Realm $REALM_NAME updated with supported locale and default locale set to zhtw."
 
 echo "Keycloak configuration is complete! Please try to visit https://${VM_IP}"
+
+echo "Keycloak initialization completed successfully."
+
+# --- 自我清理：這是確保任務只執行一次的關鍵 ---
+#echo "正在停用並移除 deploy-keycloak.service..."
+#sudo systemctl disable deploy-keycloak.service
+#sudo rm /etc/systemd/system/deploy-keycloak.service
+#sudo systemctl daemon-reload
+
+exit 0

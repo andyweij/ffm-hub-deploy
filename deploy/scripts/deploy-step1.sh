@@ -3,10 +3,9 @@ set -e
 
 # 變數定義
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_FILE="$SCRIPT_DIR/config/.env"
-
+PROJECT_ROOT=$(dirname "$SCRIPT_DIR")
 # 日誌資料夾與檔案設定
-LOG_DIR="$SCRIPT_DIR/logs"
+LOG_DIR="$PROJECT_ROOT/logs"
 LOG_FILE="$LOG_DIR/deploy_nvidia_docker.log"
 
 # 若 logs 資料夾不存在，則建立
@@ -19,27 +18,18 @@ echo "Starting deployment script : $(date)"
 INSTALLED=()
 SKIPPED=()
 
-if [ ! -f "$ENV_FILE" ]; then
-    echo "Can't find .env file: $ENV_FILE"
-    exit 1
-fi
-
-# 從 .env 檔案載入環境變數
-set -o allexport
-source "$ENV_FILE"
-set +o allexport
-# 重新取得最新的 IP（避免被上面覆蓋）
-VM_IP=$(curl -s ifconfig.me)
-
-if grep -q "^VM_IP=" "$ENV_FILE"; then
-    echo ".env is already exists VM_IP , will overwrite"
-    # 使用 sed 修改原有的 VM_IP 內容
-    sed -i "s/^VM_IP=.*/VM_IP=$VM_IP/" "$ENV_FILE"
+if command -v curl >/dev/null 2>&1; then
+    echo "curl 已安裝，跳過安裝步驟。"
+    SKIPPED+=("curl")
 else
-    echo "Create VM_IP in .env"
-    echo -e "\nVM_IP=$VM_IP" >> "$ENV_FILE"
+    echo "安裝 curl..."
+    sudo apt-get update
+    sudo apt-get install -y curl || {
+        echo "Failed to install curl"
+        exit 1
+    }
+    INSTALLED+=("curl")
 fi
-
 
 
 # 檢查是否需要執行初始安裝
@@ -154,7 +144,7 @@ if [ ${#INSTALLED[@]} -gt 0 ]; then
     for item in "${INSTALLED[@]}"; do
         echo "  - $item"
     done
-	printf "%s\n" "${INSTALLED[@]}" | tee "$SCRIPT_DIR/logs/deploy_installed.log" > /dev/null
+	printf "%s\n" "${INSTALLED[@]}" | tee "$LOG_DIR/deploy_installed.log" > /dev/null
 fi
 
 if [ ${#SKIPPED[@]} -gt 0 ]; then
@@ -168,33 +158,30 @@ echo "--------------------------------------------------"
 # 只有當有安裝新套件時才重啟
 if [ ${#INSTALLED[@]} -gt 0 ]; then
     echo "Rebooting system to complete installation..."
-		echo "正在設定開機自動執行 deploy-step2.sh..."
-		SERVICE_FILE_CONTENT="[Unit]
-		Description=Run Second Step of Deployment After Reboot
-		After=network-online.target docker.service
-		Wants=network-online.target docker.service
+    echo "正在設定開機自動執行 deploy-step2.sh 和 deploy-keycloak.sh..."
 
-		[Service]
-		Type=oneshot
-		User=$(whoami)
-		WorkingDirectory=${SCRIPT_DIR}
-		TimeoutStartSec=600
-		ExecStart=${SCRIPT_DIR}/deploy-step2.sh
+SERVICE_CONTENT="[Unit]
+Description=Run All Deployment Steps After Reboot
+After=network-online.target docker.service
+Wants=network-online.target docker.service
 
-		[Install]
-		WantedBy=multi-user.target"
+[Service]
+Type=oneshot
+User=$(whoami)
+WorkingDirectory=${SCRIPT_DIR}
+ExecStart=${SCRIPT_DIR}/deploy-all.sh
+# --- 新增這一行，在主要任務成功後執行清理 ---
+ExecStartPost=${SCRIPT_DIR}/cleanup-service.sh deploy-all.service
 
-		echo "正在動態產生 systemd 服務設定檔..."
-		# 將上面定義的內容寫入到 /etc/systemd/system/deploy-step2.service
-		# 使用 sudo tee 可以解決權限問題
-		echo "$SERVICE_FILE_CONTENT" | sudo tee /etc/systemd/system/deploy-step2.service > /dev/null
+StandardOutput=append:${LOG_DIR}/deploy-all.log
+StandardError=append:${LOG_DIR}/deploy-all.log
 
-    # 2. 重新載入 systemd，讓它讀取到新的服務設定
-    sudo systemctl daemon-reload
+[Install]
+WantedBy=multi-user.target"
 
-    # 3. 啟用我們的服務，讓它在下次開機時自動執行
-    sudo systemctl enable deploy-step2.service
-    # ▲▲▲ 改造結束 ▲▲▲
+echo "$SERVICE_CONTENT" | sudo tee /etc/systemd/system/deploy-all.service > /dev/null
+sudo systemctl daemon-reload
+sudo systemctl enable deploy-all.service
 
     sleep 5
     sudo systemctl reboot

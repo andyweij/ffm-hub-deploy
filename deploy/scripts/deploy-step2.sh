@@ -1,11 +1,19 @@
 #!/bin/bash
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_FILE="$SCRIPT_DIR/config/.env"
+PROJECT_ROOT=$(dirname "$SCRIPT_DIR")
+ENV_FILE="$PROJECT_ROOT/.env"
 # 日誌資料夾與檔案設定
-LOG_DIR="$SCRIPT_DIR/logs"
+LOG_DIR="$PROJECT_ROOT/logs"
 LOG_FILE="$LOG_DIR/deploy-step2.log"
-SECRET_FILE="$SCRIPT_DIR/config/S3_secret.txt"
+SECRET_FILE="$PROJECT_ROOT/config/S3_secret.txt"
+# 變數定義
+COMPOSE_FILE="$PROJECT_ROOT/docker-compose.yaml"
+DAEMON_JSON="/etc/docker/daemon.json"
+TEMP_JSON="/tmp/daemon.json.tmp"
+CERT_DIR="$PROJECT_ROOT/certs/"
+CERT_SCRIPT="$SCRIPT_DIR/gen-all-cert.sh"
+CURRENT_VM_IP=$(curl -s ifconfig.me)
 
 # 若 logs 資料夾不存在，則建立
 mkdir -p "$LOG_DIR"
@@ -13,13 +21,6 @@ mkdir -p "$LOG_DIR"
 exec > >(tee -a "$LOG_FILE") 2>&1
 echo "Starting deploy step2 : $(date)"
 
-# 變數定義
-COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yaml"
-DAEMON_JSON="/etc/docker/daemon.json"
-TEMP_JSON="/tmp/daemon.json.tmp"
-CERT_DIR="$SCRIPT_DIR/certs/"
-CERT_SCRIPT="$SCRIPT_DIR/gen-all-cert.sh"
-CURRENT_VM_IP=$(curl -s ifconfig.me)
 
 if [ ! -f "$CERT_SCRIPT" ]; then
     echo "錯誤: 找不到憑證產生腳本 ${CERT_SCRIPT}"
@@ -91,29 +92,29 @@ if [ -z "$MODEL_LIST" ]; then
     exit 1
 fi
 
-# 檢查 VM_IP 是否為空
-if [ -z "$VM_IP" ]; then
-    echo "VM_IP is not set in the .env file."
-    exit 1
-fi
-
-# 比對 IP
-if [ "$CURRENT_VM_IP" = "$VM_IP" ]; then
-    echo "IP 相同：$CURRENT_VM_IP"
+# 檢查 .env 檔案中是否已存在「正確」的 VM_IP
+if grep -q "^VM_IP=${CURRENT_VM_IP}$" "$ENV_FILE"; then
+    # 如果已存在且正確，就什麼都不做，只印出訊息
+    echo "IP in .env is correct: $CURRENT_VM_IP"
 else
-    echo "IP 不相同，準備更新 .env 中的 VM_IP"
+    # 如果不存在或不正確，就執行更新或新增的邏輯
+    echo "IP in .env is incorrect or missing. Updating..."
     echo "CURRENT_VM_IP: $CURRENT_VM_IP"
-    echo "VM_IP from ENV: $VM_IP"
+    echo "VM_IP from ENV: $VM_IP" # $VM_IP 此時可能是舊的 IP 或空值
 
+    # 檢查 .env 中是否「存在」VM_IP 這一行 (不論值為何)
     if grep -q "^VM_IP=" "$ENV_FILE"; then
+        # 如果存在，就用 sed 取代
         sed -i "s/^VM_IP=.*/VM_IP=$CURRENT_VM_IP/" "$ENV_FILE"
         echo "已更新 .env 中的 VM_IP 為：$CURRENT_VM_IP"
     else
+        # 如果不存在，就用 echo 新增
         echo "VM_IP=$CURRENT_VM_IP" >> "$ENV_FILE"
         echo "已新增 VM_IP 至 .env：$CURRENT_VM_IP"
     fi
 
-    # 重新載入 .env（以使用新 IP）
+    # 重新載入 .env，讓後續的腳本能用到最新的 IP
+    echo "Reloading .env file..."
     set -o allexport
     source "$ENV_FILE"
     set +o allexport
@@ -182,38 +183,9 @@ echo "$HARBOR_PASSWORD" | docker login "$HARBOR_REGISTRY" -u "$HARBOR_USERNAME" 
 
 # 啟動 Docker Compose
 echo "Starting Docker Compose..."
-docker compose -f "$COMPOSE_FILE" up -d --no-recreate|| {
+docker compose --project-directory "$PROJECT_ROOT" -f "$COMPOSE_FILE" up -d --no-recreate || {
     echo "Failed to start Docker Compose"
     exit 1
 }
-
-
-# 初始化keycloak；執行init-keycloak.sh
-echo "Executing init-keycloak.sh..."
-INIT_KEYCLOAK="$SCRIPT_DIR/init-keycloak.sh"
-if [ ! -f "$INIT_KEYCLOAK" ]; then
-    echo "Can't find init-keycloak.sh file: $INIT_KEYCLOAK"
-    exit 1
-fi
-bash "$INIT_KEYCLOAK" || {
-    echo "Failed to execute init-keycloak.sh"
-    exit 1
-}
-
-echo "FFM-HUB Service Deployment completed"
-
-
-# --- 自我清理：這是確保任務只執行一次的關鍵 ---
-echo "部署腳本 deploy-step2.sh 已成功執行。"
-echo "正在停用並移除 systemd 服務以防止重複執行..."
-
-# 停用服務，讓它開機時不再啟動
-sudo systemctl disable deploy-step2.service
-
-# 從系統中刪除服務設定檔
-sudo rm /etc/systemd/system/deploy-step2.service
-
-# 重新載入 systemd，確保變更生效
-sudo systemctl daemon-reload
 
 exit 0

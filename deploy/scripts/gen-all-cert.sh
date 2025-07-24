@@ -1,15 +1,41 @@
 #!/bin/bash
 
 # ========== Basic Configuration ==========
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT=$(dirname "$SCRIPT_DIR")
+CERT_DIR="${PROJECT_ROOT}/certs"
 PASSWORD="changeit"
 DAYS=3650
-IP=$(curl -s ifconfig.me)
+ENV_FILE="$PROJECT_ROOT/.env"
 SERVICES=("aiportal" "api-relay" "keycloak")
-EXT_TEMPLATE="./certs/v3_ext_template.ext"
+EXT_TEMPLATE="${CERT_DIR}/v3_ext_template.ext"
 
+# 1. 檢查 .env 檔案是否存在
+if [ ! -f "$ENV_FILE" ]; then
+    echo "錯誤：找不到環境設定檔 .env 於 '$ENV_FILE'"
+    exit 1
+fi
+
+# 2. 從 .env 檔案載入環境變數
+set -o allexport
+source "$ENV_FILE"
+set +o allexport
+
+# 3. 驗證 VM_IP 是否成功載入且不為空
+if [ -z "$VM_IP" ]; then
+    echo "錯誤：在 .env 檔案中未找到 VM_IP 或其值為空。"
+    exit 1
+fi
+
+# 從 .env 檔案載入環境變數
+set -o allexport
+source "$ENV_FILE"
+set +o allexport
+
+IP="${VM_IP}"
 # ========== Clean Previous Output ==========
-rm -rf ./certs
-mkdir -p certs
+rm -rf "$CERT_DIR"
+mkdir -p "$CERT_DIR"
 
 # ========== Create v3_ca.ext Template ==========
 cat > $EXT_TEMPLATE <<EOF
@@ -24,7 +50,7 @@ EOF
 for service in "${SERVICES[@]}"; do
   echo "Generating certificate for: $service"
 
-  TARGET_DIR="./certs/$service"
+  TARGET_DIR="${CERT_DIR}/$service"
   mkdir -p "$TARGET_DIR"
 
   # Step 1: Generate Private Key
@@ -33,7 +59,7 @@ for service in "${SERVICES[@]}"; do
   # Step 2: Create CSR
   openssl req -new -key "$TARGET_DIR/private.key" \
     -out "$TARGET_DIR/request.csr" \
-    -subj "/C=TW/ST=Taiwan/L=Taipei/O=FFM/OU=$service/CN=$IP"
+    -subj "/C=TW/ST=Taiwan/L=Taipei/O=AFS/OU=$service/CN=$IP"
 
   # Step 3: Sign Certificate
   openssl x509 -req -in "$TARGET_DIR/request.csr" \

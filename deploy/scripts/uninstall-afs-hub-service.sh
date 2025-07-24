@@ -6,18 +6,18 @@ declare -A IMAGE_TO_CONTAINER_NAMES=(
   ["ffm-hub/api-relay"]="api-relay"
   ["ffm-hub/aiportal"]="aiportal"
   ["keycloak"]="keycloak"
-  ["postgres"]="ffm-hub-db"
-  ["prom/prometheus"]="ffm-hub-prometheus"
-  ["grafana/grafana"]="ffm-hub-grafana"
+  ["postgres"]="afs-hub-db"
+  ["prom/prometheus"]="afs-hub-prometheus"
+  ["grafana/grafana"]="afs-hub-grafana"
 )
 
 # 保護模組 image（刪除失敗就跳過）
 PROTECTED_IMAGES=("keycloak" "postgres" "prom/prometheus" "grafana/grafana")
 
-echo "收集與 FFM-HUB 及 vLLM 相關的 image 資訊..."
+echo "收集與 AFS-HUB 及 vLLM 相關的 image 資訊..."
 
 # 找出所有相關 image（手動與 vllm）
-IMAGES=$(docker images --format "{{.Repository}}:{{.Tag}} {{.ID}}" | grep -Ei 'ffm-hub|keycloak|postgres|prom/prometheus|grafana/grafana|vllm')
+IMAGES=$(docker images --format "{{.Repository}}:{{.Tag}} {{.ID}}" | grep -Ei 'afs-hub|keycloak|postgres|prom/prometheus|grafana/grafana|vllm')
 
 if [ -z "$IMAGES" ]; then
   echo "沒有找到任何相關 image"
@@ -73,4 +73,4 @@ done <<< "$IMAGES"
 # Volume 清除（可選）
 docker volume rm deploy_keycloak_db || true
 
-echo "✅ FFM-HUB 及 vLLM 容器與 image 清理作業完成"
+echo "✅ AFS-HUB 及 vLLM 容器與 image 清理作業完成"
