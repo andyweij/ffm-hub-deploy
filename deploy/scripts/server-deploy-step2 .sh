@@ -22,6 +22,37 @@ mkdir -p "$LOG_DIR"
 exec > >(tee -a "$LOG_FILE") 2>&1
 echo "Starting deploy step2 : $(date)"
 
+set -o allexport
+source "$ENV_FILE"
+set +o allexport
+
+# 檢查 .env 檔案中是否已存在「正確」的 VM_IP
+if grep -q "^VM_IP=${CURRENT_VM_IP}$" "$ENV_FILE"; then
+    # 如果已存在且正確，就什麼都不做，只印出訊息
+    echo "IP in .env is correct: $CURRENT_VM_IP"
+else
+    # 如果不存在或不正確，就執行更新或新增的邏輯
+    echo "IP in .env is incorrect or missing. Updating..."
+    echo "CURRENT_VM_IP: $CURRENT_VM_IP"
+    echo "VM_IP from ENV: $VM_IP" # $VM_IP 此時可能是舊的 IP 或空值
+
+    # 檢查 .env 中是否「存在」VM_IP 這一行 (不論值為何)
+    if grep -q "^VM_IP=" "$ENV_FILE"; then
+        # 如果存在，就用 sed 取代
+        sed -i "s/^VM_IP=.*/VM_IP=$CURRENT_VM_IP/" "$ENV_FILE"
+        echo "已更新 .env 中的 VM_IP 為：$CURRENT_VM_IP"
+    else
+        # 如果不存在，就用 echo 新增
+        # 在新增之前，先檢查檔案末尾是否有換行符
+        # 如果沒有，就先追加一個換行符
+        if [[ $(tail -c 1 "$ENV_FILE" | wc -l) -eq 0 && $(wc -c < "$ENV_FILE") -ne 0 ]]; then
+            echo "" >> "$ENV_FILE" # 添加一個空行，也就是一個換行符
+        fi
+        
+        echo "VM_IP=$CURRENT_VM_IP" >> "$ENV_FILE"
+        echo "已新增 VM_IP 至 .env：$CURRENT_VM_IP"
+    fi
+fi
 
 if [ ! -f "$CERT_SCRIPT" ]; then
     echo "錯誤: 找不到憑證產生腳本 ${CERT_SCRIPT}"
@@ -93,33 +124,6 @@ if [ -z "$MODEL_LIST" ]; then
     exit 1
 fi
 
-# 檢查 .env 檔案中是否已存在「正確」的 VM_IP
-if grep -q "^VM_IP=${CURRENT_VM_IP}$" "$ENV_FILE"; then
-    # 如果已存在且正確，就什麼都不做，只印出訊息
-    echo "IP in .env is correct: $CURRENT_VM_IP"
-else
-    # 如果不存在或不正確，就執行更新或新增的邏輯
-    echo "IP in .env is incorrect or missing. Updating..."
-    echo "CURRENT_VM_IP: $CURRENT_VM_IP"
-    echo "VM_IP from ENV: $VM_IP" # $VM_IP 此時可能是舊的 IP 或空值
-
-    # 檢查 .env 中是否「存在」VM_IP 這一行 (不論值為何)
-    if grep -q "^VM_IP=" "$ENV_FILE"; then
-        # 如果存在，就用 sed 取代
-        sed -i "s/^VM_IP=.*/VM_IP=$CURRENT_VM_IP/" "$ENV_FILE"
-        echo "已更新 .env 中的 VM_IP 為：$CURRENT_VM_IP"
-    else
-        # 如果不存在，就用 echo 新增
-        echo "VM_IP=$CURRENT_VM_IP" >> "$ENV_FILE"
-        echo "已新增 VM_IP 至 .env：$CURRENT_VM_IP"
-    fi
-
-    # 重新載入 .env，讓後續的腳本能用到最新的 IP
-    echo "Reloading .env file..."
-    set -o allexport
-    source "$ENV_FILE"
-    set +o allexport
-fi
 
 # 等待 Docker 服務啟動
 echo "Waiting for Docker service to start..."

@@ -10,6 +10,9 @@ echo "--- [$(date)] --- Starting Step 2: Main Deployment ---"
 # 執行 step2 腳本
 bash "${SCRIPT_DIR}/deploy-step2.sh"
 
+#內部IP使用script
+#bash "${SCRIPT_DIR}/server-deploy-step2 .sh"
+
 echo "--- [$(date)] --- Step 2 Completed. Starting Step 3: Keycloak Init ---"
 # 執行 keycloak 初始化腳本
 bash "${SCRIPT_DIR}/init-keycloak.sh"

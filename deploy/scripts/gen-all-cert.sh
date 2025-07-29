@@ -27,11 +27,6 @@ if [ -z "$VM_IP" ]; then
     exit 1
 fi
 
-# 從 .env 檔案載入環境變數
-set -o allexport
-source "$ENV_FILE"
-set +o allexport
-
 IP="${VM_IP}"
 # ========== Clean Previous Output ==========
 rm -rf "$CERT_DIR"
