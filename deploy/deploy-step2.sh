@@ -1,25 +1,25 @@
 #!/bin/bash
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT=$(dirname "$SCRIPT_DIR")
-ENV_FILE="$PROJECT_ROOT/.env"
+ENV_FILE="$SCRIPT_DIR/config/.env"
 # 日誌資料夾與檔案設定
-LOG_DIR="$PROJECT_ROOT/logs"
+LOG_DIR="$SCRIPT_DIR/logs"
 LOG_FILE="$LOG_DIR/deploy-step2.log"
-SECRET_FILE="$PROJECT_ROOT/config/S3_secret.txt"
-# 變數定義
-COMPOSE_FILE="$PROJECT_ROOT/docker-compose.yaml"
-DAEMON_JSON="/etc/docker/daemon.json"
-TEMP_JSON="/tmp/daemon.json.tmp"
-CERT_DIR="$PROJECT_ROOT/certs/"
-CERT_SCRIPT="$SCRIPT_DIR/gen-all-cert.sh"
-CURRENT_VM_IP=$(curl -s ifconfig.me)
+SECRET_FILE="$SCRIPT_DIR/config/S3_secret.txt"
 
 # 若 logs 資料夾不存在，則建立
 mkdir -p "$LOG_DIR"
 
 exec > >(tee -a "$LOG_FILE") 2>&1
 echo "Starting deploy step2 : $(date)"
+
+# 變數定義
+COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yaml"
+DAEMON_JSON="/etc/docker/daemon.json"
+TEMP_JSON="/tmp/daemon.json.tmp"
+CERT_DIR="$SCRIPT_DIR/certs/"
+CERT_SCRIPT="$SCRIPT_DIR/gen-all-cert.sh"
+CURRENT_VM_IP=$(curl -s ifconfig.me)
 
 set -o allexport
 source "$ENV_FILE"
@@ -70,7 +70,7 @@ if [ ! -d "$CERT_DIR" ] || [ ! -f "$ENV_FILE" ] || [ ! -f "$SECRET_FILE" ]; then
     exit 1
 fi
 
-# 清理 .env 和 S3_secret.txt 的換行符和 BOM---------
+# 清理 .env 和 S3_secret.txt 的換行符和 BOM
 sed -i -e 's/\r$//' "$ENV_FILE" "$SECRET_FILE"
 sed -i '1s/^\xEF\xBB\xBF//' "$ENV_FILE" "$SECRET_FILE"
 
@@ -100,8 +100,7 @@ while IFS= read -r line || [[ -n "$line" ]]; do
 done < "$SECRET_FILE"
 echo ".env 檔案更新完成。"
 
-# 重新載入 .env，讓後續的腳本能用到最新的 IP
-echo "Reloading .env file..."
+# 從 .env 檔案載入環境變數
 set -o allexport
 source "$ENV_FILE"
 set +o allexport
@@ -112,6 +111,7 @@ if [ -z "$HARBOR_USERNAME" ] || [ -z "$HARBOR_PASSWORD" ] || [ -z "$HARBOR_REGIS
     exit 1
 fi
 
+echo "設定檔 $ENV_FILE 已更新完成。"
 
 if [ -z "$S3_SECRET_KEY" ] || [ -z "$S3_ACCESS_KEY" ] || [ -z "$S3_END_POINT" ] || [ -z "$S3_BUCKET_NAME" ] || [ -z "$S3_PREFIX" ]; then
     echo "$ENV_FILE s3 setting parameter may be empty"
@@ -122,7 +122,6 @@ if [ -z "$MODEL_LIST" ]; then
     echo "$ENV_FILE model list setting parameter may be empty"
     exit 1
 fi
-
 
 # 等待 Docker 服務啟動
 echo "Waiting for Docker service to start..."
@@ -187,9 +186,22 @@ echo "$HARBOR_PASSWORD" | docker login "$HARBOR_REGISTRY" -u "$HARBOR_USERNAME" 
 
 # 啟動 Docker Compose
 echo "Starting Docker Compose..."
-docker compose --project-directory "$PROJECT_ROOT" -f "$COMPOSE_FILE" up -d --no-recreate || {
+docker compose -f "$COMPOSE_FILE" up -d --no-recreate|| {
     echo "Failed to start Docker Compose"
     exit 1
 }
 
+# 初始化keycloak；執行init-keycloak.sh
+echo "Executing init-keycloak.sh..."
+INIT_KEYCLOAK="$SCRIPT_DIR/init-keycloak.sh"
+if [ ! -f "$INIT_KEYCLOAK" ]; then
+    echo "Can't find init-keycloak.sh file: $INIT_KEYCLOAK"
+    exit 1
+fi
+bash "$INIT_KEYCLOAK" || {
+    echo "Failed to execute init-keycloak.sh"
+    exit 1
+}
+
+echo "FFM-HUB Service Deployment completed"
 exit 0

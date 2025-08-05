@@ -3,9 +3,10 @@ set -e
 
 # 變數定義
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT=$(dirname "$SCRIPT_DIR")
+ENV_FILE="$SCRIPT_DIR/config/.env"
+
 # 日誌資料夾與檔案設定
-LOG_DIR="$PROJECT_ROOT/logs"
+LOG_DIR="$SCRIPT_DIR/logs"
 LOG_FILE="$LOG_DIR/deploy_nvidia_docker.log"
 
 # 若 logs 資料夾不存在，則建立
@@ -17,6 +18,11 @@ echo "Starting deployment script : $(date)"
 # 安裝紀錄
 INSTALLED=()
 SKIPPED=()
+
+if [ ! -f "$ENV_FILE" ]; then
+    echo "Can't find .env file: $ENV_FILE"
+    exit 1
+fi
 
 if command -v curl >/dev/null 2>&1; then
     echo "curl 已安裝，跳過安裝步驟。"
@@ -144,7 +150,7 @@ if [ ${#INSTALLED[@]} -gt 0 ]; then
     for item in "${INSTALLED[@]}"; do
         echo "  - $item"
     done
-	printf "%s\n" "${INSTALLED[@]}" | tee "$LOG_DIR/deploy_installed.log" > /dev/null
+	printf "%s\n" "${INSTALLED[@]}" | tee "$SCRIPT_DIR/logs/deploy_installed.log" > /dev/null
 fi
 
 if [ ${#SKIPPED[@]} -gt 0 ]; then
@@ -158,31 +164,6 @@ echo "--------------------------------------------------"
 # 只有當有安裝新套件時才重啟
 if [ ${#INSTALLED[@]} -gt 0 ]; then
     echo "Rebooting system to complete installation..."
-    echo "正在設定開機自動執行 deploy-step2.sh 和 deploy-keycloak.sh..."
-
-SERVICE_CONTENT="[Unit]
-Description=Run All Deployment Steps After Reboot
-After=network-online.target docker.service
-Wants=network-online.target docker.service
-
-[Service]
-Type=oneshot
-User=$(whoami)
-WorkingDirectory=${SCRIPT_DIR}
-ExecStart=${SCRIPT_DIR}/deploy-all.sh
-# --- 新增這一行，在主要任務成功後執行清理 ---
-ExecStartPost=${SCRIPT_DIR}/cleanup-service.sh deploy-all.service
-
-StandardOutput=append:${LOG_DIR}/deploy-all.log
-StandardError=append:${LOG_DIR}/deploy-all.log
-
-[Install]
-WantedBy=multi-user.target"
-
-echo "$SERVICE_CONTENT" | sudo tee /etc/systemd/system/deploy-all.service > /dev/null
-sudo systemctl daemon-reload
-sudo systemctl enable deploy-all.service
-
     sleep 5
     sudo systemctl reboot
 else

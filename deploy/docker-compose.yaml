@@ -1,6 +1,6 @@
 services:
   aiportal:
-    image: 202.5.253.162:443/ffm-hub/aiportal:1.1.0
+    image: 202.5.253.162:443/ffm-hub/aiportal:1.1.1
     container_name: aiportal
     ports:
       - "443:8443"
@@ -18,7 +18,6 @@ services:
       - SERVER_SSL_KEYSTORE=/app/certs/keystore.p12
       - SERVER_SSL_KEYSTORE_PASSWORD=changeit
       - SERVER_SSL_KEYSTORE_TYPE=PKCS12
-      - GRAFANA_URL=http://${VM_IP}:3000
     command: >
       sh -c "keytool -delete -alias api-relay -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit || true &&
              keytool -importcert -trustcacerts -noprompt -alias api-relay -file /app/certs/certificate.crt -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit &&
@@ -26,7 +25,7 @@ services:
     networks:
       - afs-hub-network
   api-relay:
-    image: 202.5.253.162:443/ffm-hub/api-relay:0.0.22
+    image: 202.5.253.162:443/ffm-hub/api-relay:0.0.23
     container_name: api-relay
     ports:
       - "${API_RELAY_HOST_PORT}:8443"
@@ -54,7 +53,7 @@ services:
       - MODEL_DIR=${MODEL_DIR}
       - MODEL_LIST=${MODEL_LIST}
       - HUB_NAME=${HUB_NAME}
-      - API_RELAY_HOST_PORT=${API_RELAY_HOST_PORT}
+      - API_RELAY_HOST=https://${VM_IP}:${API_RELAY_HOST_PORT}
     command: >
       sh -c "
         chmod +x /app/wait-for-it.sh &&
