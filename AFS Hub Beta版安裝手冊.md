@@ -65,6 +65,7 @@ cd ${解壓縮afs-hub-installer目錄路徑}
 ##### 6. 賦予執行權限，指令如下：
 ```bash
 sudo chmod 775 -R afs-hub-installer/ 
+find afs-hub-installer/deploy/ -maxdepth 1 -name "*.sh" -exec sed -i -e 's/\r$//' {} \;
 ```
 ![image](https://hackmd.io/_uploads/B1BcL_xDxl.png)
 

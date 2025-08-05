@@ -2,10 +2,11 @@
 
 # 變數定義
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LOG_DIR="$SCRIPT_DIR/logs"
+PROJECT_ROOT=$(dirname "$SCRIPT_DIR")
+LOG_DIR="$PROJECT_ROOT/logs"
 LOG_FILE="$LOG_DIR/init-keycloak.log"
-ENV_FILE="$SCRIPT_DIR/config/.env"
-LOCAL_VM_IP=$(curl -s ifconfig.me)
+ENV_FILE="$PROJECT_ROOT/.env"
+
 KEYCLOAK_CONTAINER="keycloak"
 KEYCLOAK_URL="https://0.0.0.0:8443"
 ROLE_NAME="admin"
@@ -15,7 +16,6 @@ CLIENT_ID="ffm"
 
 exec > >(tee -a "$LOG_FILE") 2>&1
 
-# 動態取得 VM IP
 if [ ! -f "$ENV_FILE" ]; then
     echo "未找到 .env 檔案: $ENV_FILE"
     exit 1
@@ -27,11 +27,6 @@ sed -i -e 's/\r$//' $ENV_FILE
 set -o allexport
 source "$ENV_FILE"
 set +o allexport
-
-if [ -z "$VM_IP" ]; then
-    echo "Error: Could not determine VM IP address. Please set LOCAL_VM_IP environment variable."
-    exit 1
-fi
 
 LOCAL_VM_IP="https://${VM_IP}/*"
 
@@ -69,26 +64,40 @@ until curl -k -s -f "http://localhost:8443/q/health/live" >/dev/null; do
 done
 echo "Keycloak health check passed"
 
-# 取得管理員存取權杖
+# 取得管理員存取權杖（增加重試機制）
 echo "Obtaining Keycloak admin access token..."
-TOKEN_RESPONSE=$(curl -k -s -X POST \
-  "${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token" \
-  -d "client_id=admin-cli" \
-  -d "username=${ADMIN_USERNAME}" \
-  -d "password=${ADMIN_PASSWORD}" \
-  -d "grant_type=password")
+MAX_TOKEN_RETRIES=30
+TOKEN_RETRY_COUNT=0
+ACCESS_TOKEN=""
 
-if [ $? -ne 0 ]; then
-    echo "Failed to obtain access token"
-    exit 1
-fi
+while [ -z "$ACCESS_TOKEN" ] || [ "$ACCESS_TOKEN" = "null" ]; do
+    TOKEN_RESPONSE=$(curl -k -s -X POST \
+      "${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token" \
+      -d "client_id=admin-cli" \
+      -d "username=${ADMIN_USERNAME}" \
+      -d "password=${ADMIN_PASSWORD}" \
+      -d "grant_type=password")
 
-ACCESS_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.access_token')
-if [ -z "$ACCESS_TOKEN" ] || [ "$ACCESS_TOKEN" = "null" ]; then
-    echo "Failed to parse access token from response: $TOKEN_RESPONSE"
-    exit 1
-fi
-
+    if [ $? -eq 0 ]; then
+        ACCESS_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.access_token')
+        
+        if [ -n "$ACCESS_TOKEN" ] && [ "$ACCESS_TOKEN" != "null" ]; then
+            echo "Successfully obtained access token"
+            break
+        fi
+    fi
+    
+    TOKEN_RETRY_COUNT=$((TOKEN_RETRY_COUNT + 1))
+    echo "Failed to obtain access token (attempt $TOKEN_RETRY_COUNT/$MAX_TOKEN_RETRIES), retrying in 10 seconds..."
+    
+    if [ $TOKEN_RETRY_COUNT -ge $MAX_TOKEN_RETRIES ]; then
+        echo "Failed to obtain access token after $MAX_TOKEN_RETRIES attempts"
+        echo "Last response: $TOKEN_RESPONSE"
+        exit 1
+    fi
+    
+    sleep 10
+done
 # TERMS_AND_CONDITIONS
 echo "Enabling Terms and Conditions required action for realm $REALM_NAME..."
 curl -k -s -X PUT \
@@ -229,3 +238,13 @@ curl -k -s -X PUT \
 echo "Realm $REALM_NAME updated with supported locale and default locale set to zhtw."
 
 echo "Keycloak configuration is complete! Please try to visit https://${VM_IP}"
+
+echo "Keycloak initialization completed successfully."
+
+# --- 自我清理：這是確保任務只執行一次的關鍵 ---
+#echo "正在停用並移除 deploy-keycloak.service..."
+#sudo systemctl disable deploy-keycloak.service
+#sudo rm /etc/systemd/system/deploy-keycloak.service
+#sudo systemctl daemon-reload
+
+exit 0

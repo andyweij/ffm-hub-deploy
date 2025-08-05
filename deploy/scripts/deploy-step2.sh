@@ -1,11 +1,19 @@
 #!/bin/bash
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_FILE="$SCRIPT_DIR/config/.env"
+PROJECT_ROOT=$(dirname "$SCRIPT_DIR")
+ENV_FILE="$PROJECT_ROOT/.env"
 # 日誌資料夾與檔案設定
-LOG_DIR="$SCRIPT_DIR/logs"
+LOG_DIR="$PROJECT_ROOT/logs"
 LOG_FILE="$LOG_DIR/deploy-step2.log"
-SECRET_FILE="$SCRIPT_DIR/config/S3_secret.txt"
+SECRET_FILE="$PROJECT_ROOT/config/S3_secret.txt"
+# 變數定義
+COMPOSE_FILE="$PROJECT_ROOT/docker-compose.yaml"
+DAEMON_JSON="/etc/docker/daemon.json"
+TEMP_JSON="/tmp/daemon.json.tmp"
+CERT_DIR="$PROJECT_ROOT/certs/"
+CERT_SCRIPT="$SCRIPT_DIR/gen-all-cert.sh"
+#CURRENT_VM_IP=$(curl -s ifconfig.me)
 
 # 若 logs 資料夾不存在，則建立
 mkdir -p "$LOG_DIR"
@@ -13,13 +21,49 @@ mkdir -p "$LOG_DIR"
 exec > >(tee -a "$LOG_FILE") 2>&1
 echo "Starting deploy step2 : $(date)"
 
-# 變數定義
-COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yaml"
-DAEMON_JSON="/etc/docker/daemon.json"
-TEMP_JSON="/tmp/daemon.json.tmp"
-CERT_DIR="$SCRIPT_DIR/certs/"
-CERT_SCRIPT="$SCRIPT_DIR/gen-all-cert.sh"
-CURRENT_VM_IP=$(curl -s ifconfig.me)
+if [ -f "$ENV_FILE" ]; then
+    set -o allexport
+    source "$ENV_FILE"
+    set +o allexport
+fi
+
+# 根據 .env 中的設定選擇 IP 取得方式
+if [ "$IP_ACQUISITION_METHOD" == "local" ]; then
+    echo "使用本地 IP 取得方式。"
+    CURRENT_VM_IP=$(ip -4 addr show $(ip route | grep '^default' | awk '{print $5}') | grep -oP 'inet \K[\d.]+')
+else
+    echo "使用公開 IP 取得方式 (預設)。"
+    CURRENT_VM_IP=$(curl -s ifconfig.me)
+fi
+# --- IP 取得邏輯結束 ---
+
+# 檢查 .env 檔案中是否已存在「正確」的 VM_IP
+if grep -q "^VM_IP=${CURRENT_VM_IP}$" "$ENV_FILE"; then
+    # 如果已存在且正確，就什麼都不做，只印出訊息
+    echo "IP in .env is correct: $CURRENT_VM_IP"
+else
+    # 如果不存在或不正確，就執行更新或新增的邏輯
+    echo "IP in .env is incorrect or missing. Updating..."
+    echo "CURRENT_VM_IP: $CURRENT_VM_IP"
+    echo "VM_IP from ENV: $VM_IP" # $VM_IP 此時可能是舊的 IP 或空值
+
+    # 檢查 .env 中是否「存在」VM_IP 這一行 (不論值為何)
+    if grep -q "^VM_IP=" "$ENV_FILE"; then
+        # 如果存在，就用 sed 取代
+        sed -i "s/^VM_IP=.*/VM_IP=$CURRENT_VM_IP/" "$ENV_FILE"
+        echo "已更新 .env 中的 VM_IP 為：$CURRENT_VM_IP"
+    else
+        # 如果不存在，就用 echo 新增
+        # 在新增之前，先檢查檔案末尾是否有換行符
+        # 如果沒有，就先追加一個換行符
+        if [[ $(tail -c 1 "$ENV_FILE" | wc -l) -eq 0 && $(wc -c < "$ENV_FILE") -ne 0 ]]; then
+            echo "" >> "$ENV_FILE" # 添加一個空行，也就是一個換行符
+        fi
+        
+        echo "VM_IP=$CURRENT_VM_IP" >> "$ENV_FILE"
+        echo "已新增 VM_IP 至 .env：$CURRENT_VM_IP"
+    fi
+fi
 
 set -o allexport
 source "$ENV_FILE"
@@ -70,7 +114,7 @@ if [ ! -d "$CERT_DIR" ] || [ ! -f "$ENV_FILE" ] || [ ! -f "$SECRET_FILE" ]; then
     exit 1
 fi
 
-# 清理 .env 和 S3_secret.txt 的換行符和 BOM
+# 清理 .env 和 S3_secret.txt 的換行符和 BOM---------
 sed -i -e 's/\r$//' "$ENV_FILE" "$SECRET_FILE"
 sed -i '1s/^\xEF\xBB\xBF//' "$ENV_FILE" "$SECRET_FILE"
 
@@ -100,7 +144,8 @@ while IFS= read -r line || [[ -n "$line" ]]; do
 done < "$SECRET_FILE"
 echo ".env 檔案更新完成。"
 
-# 從 .env 檔案載入環境變數
+# 重新載入 .env，讓後續的腳本能用到最新的 IP
+echo "Reloading .env file..."
 set -o allexport
 source "$ENV_FILE"
 set +o allexport
@@ -111,7 +156,6 @@ if [ -z "$HARBOR_USERNAME" ] || [ -z "$HARBOR_PASSWORD" ] || [ -z "$HARBOR_REGIS
     exit 1
 fi
 
-echo "設定檔 $ENV_FILE 已更新完成。"
 
 if [ -z "$S3_SECRET_KEY" ] || [ -z "$S3_ACCESS_KEY" ] || [ -z "$S3_END_POINT" ] || [ -z "$S3_BUCKET_NAME" ] || [ -z "$S3_PREFIX" ]; then
     echo "$ENV_FILE s3 setting parameter may be empty"
@@ -186,22 +230,9 @@ echo "$HARBOR_PASSWORD" | docker login "$HARBOR_REGISTRY" -u "$HARBOR_USERNAME" 
 
 # 啟動 Docker Compose
 echo "Starting Docker Compose..."
-docker compose -f "$COMPOSE_FILE" up -d --no-recreate|| {
+docker compose --project-directory "$PROJECT_ROOT" -f "$COMPOSE_FILE" up -d --no-recreate || {
     echo "Failed to start Docker Compose"
     exit 1
 }
 
-# 初始化keycloak；執行init-keycloak.sh
-echo "Executing init-keycloak.sh..."
-INIT_KEYCLOAK="$SCRIPT_DIR/init-keycloak.sh"
-if [ ! -f "$INIT_KEYCLOAK" ]; then
-    echo "Can't find init-keycloak.sh file: $INIT_KEYCLOAK"
-    exit 1
-fi
-bash "$INIT_KEYCLOAK" || {
-    echo "Failed to execute init-keycloak.sh"
-    exit 1
-}
-
-echo "FFM-HUB Service Deployment completed"
 exit 0

@@ -2,11 +2,13 @@
 
 # ========== Basic Configuration ==========
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_FILE="$SCRIPT_DIR/config/.env"
+PROJECT_ROOT=$(dirname "$SCRIPT_DIR")
+CERT_DIR="${PROJECT_ROOT}/certs"
 PASSWORD="changeit"
 DAYS=3650
+ENV_FILE="$PROJECT_ROOT/.env"
 SERVICES=("aiportal" "api-relay" "keycloak")
-EXT_TEMPLATE="./certs/v3_ext_template.ext"
+EXT_TEMPLATE="${CERT_DIR}/v3_ext_template.ext"
 
 # 1. 檢查 .env 檔案是否存在
 if [ ! -f "$ENV_FILE" ]; then
@@ -28,8 +30,8 @@ fi
 IP="${VM_IP}"
 
 # ========== Clean Previous Output ==========
-rm -rf ./certs
-mkdir -p certs
+rm -rf "$CERT_DIR"
+mkdir -p "$CERT_DIR"
 
 # ========== Create v3_ca.ext Template ==========
 cat > $EXT_TEMPLATE <<EOF
@@ -44,7 +46,7 @@ EOF
 for service in "${SERVICES[@]}"; do
   echo "Generating certificate for: $service"
 
-  TARGET_DIR="./certs/$service"
+  TARGET_DIR="${CERT_DIR}/$service"
   mkdir -p "$TARGET_DIR"
 
   # Step 1: Generate Private Key
