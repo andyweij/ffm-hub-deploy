@@ -1,6 +1,6 @@
 services:
   aiportal:
-    image: 202.5.253.162:443/ffm-hub/aiportal:1.1.2
+    image: 202.5.253.162:443/ffm-hub/aiportal:1.1.4
     container_name: aiportal
     ports:
       - "443:8443"
@@ -25,7 +25,7 @@ services:
              keytool -importcert -trustcacerts -noprompt -alias api-relay -file /app/certs/certificate.crt -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit &&
              java -jar app.jar"
     networks:
-      - afs-hub-network
+      - afs-ai-hub-network
   api-relay:
     image: 202.5.253.162:443/ffm-hub/api-relay:0.0.23
     container_name: api-relay
@@ -59,15 +59,15 @@ services:
     command: >
       sh -c "
         chmod +x /app/wait-for-it.sh &&
-        /app/wait-for-it.sh afs-hub-db:5432 --timeout=60 --strict -- echo 'Postgres is ready' &&
+        /app/wait-for-it.sh afs-ai-hub-db:5432 --timeout=60 --strict -- echo 'Postgres is ready' &&
         keytool -delete -alias keycloak -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit || true &&
         keytool -importcert -trustcacerts -noprompt -alias keycloak -file /app/certs/certificate.crt -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit &&
         java -jar app.jar"
     networks:
-      - afs-hub-network
+      - afs-ai-hub-network
   postgres:
     image: postgres:latest
-    container_name: afs-hub-db
+    container_name: afs-ai-hub-db
     volumes:
       - keycloak_db:/var/lib/postgresql/data
       - ./config/init-multiple-dbs.sql:/docker-entrypoint-initdb.d/init-multiple-dbs.sql
@@ -80,7 +80,7 @@ services:
       - POSTGRES_USER=keycloak
       - POSTGRES_PASSWORD=keycloak
     networks:
-      - afs-hub-network
+      - afs-ai-hub-network
   keycloak:
     image: quay.io/keycloak/keycloak:26.2.0
     container_name: keycloak
@@ -90,7 +90,7 @@ services:
     volumes:
       - ./certs/keycloak/certificate.crt:/opt/keycloak/conf/keycloak.crt
       - ./certs/keycloak/private.key:/opt/keycloak/conf/keycloak.key
-      - ./config/afs-hub.json:/opt/keycloak/data/import/afs-hub.json
+      - ./config/afs-ai-hub.json:/opt/keycloak/data/import/afs-ai-hub.json
       - ./keycloak_theme:/opt/keycloak/themes
     environment:
       - KEYCLOAK_ADMIN=admin
@@ -105,10 +105,10 @@ services:
       - KC_DB_URL=jdbc:postgresql://postgres:5432/keycloak
     command: start-dev --import-realm
     networks:
-      - afs-hub-network
+      - afs-ai-hub-network
   prometheus:
     image: prom/prometheus:latest
-    container_name: afs-hub-prometheus
+    container_name: afs-ai-hub-prometheus
     extra_hosts:
       - "host.docker.internal:host-gateway"     # allow a direct connection from container to the local machine
     ports:
@@ -117,10 +117,10 @@ services:
       - ./config/prometheus.yaml:/etc/prometheus/prometheus.yml # mount Prometheus config file
       - prometheus_data:/prometheus
     networks:
-      - afs-hub-network
+      - afs-ai-hub-network
   grafana:
     image: grafana/grafana:latest
-    container_name: afs-hub-grafana
+    container_name: afs-ai-hub-grafana
     depends_on:
       - prometheus
     ports:
@@ -134,12 +134,12 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
     networks:
-      - afs-hub-network
+      - afs-ai-hub-network
 volumes:
   keycloak_db:
   prometheus_data:
   
 networks:
-  afs-hub-network:
-    name: afs-hub-network
+  afs-ai-hub-network:
+    name: afs-ai-hub-network
     driver: bridge

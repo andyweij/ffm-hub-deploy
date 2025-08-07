@@ -1,7 +1,7 @@
 #!/bin/bash
 
 set -e
-# 專案的根目錄，也就是 afs-hub-installer/
+# 專案的根目錄，也就是 afs-ai-hub-installer/
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # 定義其他目錄的路徑，方便引用
@@ -34,7 +34,7 @@ else
     echo "已新增 IP_ACQUISITION_METHOD 至 .env：${IP_METHOD}"
 fi
 
-echo "=== 開始執行 AFS Hub 安裝程序 ==="
+echo "=== 開始執行 AFS AI Hub 安裝程序 ==="
 
 echo "--- 步驟 1: 執行環境初始化與安裝 ---"
 # 呼叫 scripts/ 目錄下的腳本

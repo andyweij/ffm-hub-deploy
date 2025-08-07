@@ -79,7 +79,9 @@ cd ${解壓縮afs-hub-installer目錄路徑}/afs-hub-installer/deploy/
 
 ##### 8. 執行安裝步驟1，請輸入以下指令安裝相依函式庫及工具，此步驟約需要約3至5分鐘。
 ```bash
-./deploy-step1.sh
+./install.sh
+or
+./install.sh --public-ip
 ```
 ![image](https://hackmd.io/_uploads/BJ9Wduxweg.png)
 
@@ -89,23 +91,11 @@ cd ${解壓縮afs-hub-installer目錄路徑}/afs-hub-installer/deploy/
 
 ##### 10. 再次切換至目錄deploy，指令如下：
 ```bash
-cd ${解壓縮afs-hub-installer目錄路徑}/afs-hub-installer/deploy/ 
+tail -f afs-hub-installer/deploy/logs/install.log
 ```
 ![image](https://hackmd.io/_uploads/Hy1aOOgDge.png)
 
-##### 11. 執行安裝步驟2，請輸入以下指令部署主要系統與初始化Keycloak，此步驟約需要約3至5分鐘。
-```bash
-./deploy-step2.sh 
-```
-![image](https://hackmd.io/_uploads/S10gKOgwex.png)
-
-
-##### 12. 執行安裝步驟2的過程中會自動初始化AFS Hub所使用的帳號管理系統Keycloak(init-keycloak.sh)，請等待系統初始化成功。
-![image](https://hackmd.io/_uploads/H14gsPePee.png)
-
-
-
-##### 13. 安裝完成後會看到以下訊息，請複製紅框網址開啟網頁測試。
+##### 11. 安裝完成後會看到以下訊息，請複製紅框網址開啟網頁測試。
 ![image](https://hackmd.io/_uploads/BySqovgDex.png)
 
 
