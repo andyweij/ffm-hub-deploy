@@ -1,6 +1,6 @@
 services:
   aiportal:
-    image: 202.5.253.162:443/ffm-hub/aiportal:1.1.4
+    image: 202.5.253.162:443/ffm-hub/aiportal:1.1.7
     container_name: aiportal
     ports:
       - "443:8443"
@@ -19,7 +19,7 @@ services:
       - SERVER_SSL_KEYSTORE_PASSWORD=changeit
       - SERVER_SSL_KEYSTORE_TYPE=PKCS12
       - GRAFANA_URL=http://${VM_IP}:3000
-      - API_DOC_URL=https://hackmd.io/@afshub/apidoc
+      - API_DOC_URL=https://hackmd.io/@afs-ai-hub/api-doc
     command: >
       sh -c "keytool -delete -alias api-relay -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit || true &&
              keytool -importcert -trustcacerts -noprompt -alias api-relay -file /app/certs/certificate.crt -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit &&
@@ -27,17 +27,19 @@ services:
     networks:
       - afs-ai-hub-network
   api-relay:
-    image: 202.5.253.162:443/ffm-hub/api-relay:0.0.23
+    image: 202.5.253.162:443/ffm-hub/api-relay:0.0.27
     container_name: api-relay
+    runtime: nvidia
     ports:
       - "${API_RELAY_HOST_PORT}:8443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /opt/${MODEL_DIR}:/opt/${MODEL_DIR}
+      - /opt/${LOCAL_DIR}:/opt/${LOCAL_DIR}
       - ./certs/api-relay/keystore.p12:/app/certs/keystore.p12
       - ./certs/keycloak/certificate.crt:/app/certs/certificate.crt
       - ./util/wait-for-it.sh:/app/wait-for-it.sh
     environment:
+      - NVIDIA_VISIBLE_DEVICES=all
       - KEYCLOAK_SERVER_URL=https://${VM_IP}:8443
       - VLLM_HOST=${VM_IP}
       - SERVER_PORT=8443
@@ -52,10 +54,15 @@ services:
       - S3_PREFIX=${S3_PREFIX}
       - KEYCLOAK_USERNAME=${NEW_USER}
       - KEYCLOAK_PASSWORD=${NEW_USER_PASSWORD}
-      - MODEL_DIR=${MODEL_DIR}
       - MODEL_LIST=${MODEL_LIST}
       - HUB_NAME=${HUB_NAME}
       - API_RELAY_HOST=https://${VM_IP}:${API_RELAY_HOST_PORT}
+      - MODEL_CONFIG=${MODEL_CONFIG}
+      - AGENT_LIST=${AGENT_LIST}
+      - AGENT_PREFIX=${AGENT_PREFIX}
+      - MODEL_CONFIG=${MODEL_CONFIG}
+      - LOCAL_DIR=${LOCAL_DIR}
+      - LOCAL_AGENT_DIR=${LOCAL_AGENT_DIR}
     command: >
       sh -c "
         chmod +x /app/wait-for-it.sh &&
