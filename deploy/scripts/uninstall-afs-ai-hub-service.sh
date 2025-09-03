@@ -17,7 +17,7 @@ PROTECTED_IMAGES=("keycloak" "postgres" "prom/prometheus" "grafana/grafana")
 echo "收集與 AFS-AI-HUB 及 vLLM 相關的 image 資訊..."
 
 # 找出所有相關 image（手動與 vllm）
-IMAGES=$(docker images --format "{{.Repository}}:{{.Tag}} {{.ID}}" | grep -Ei 'afs-ai-hub|keycloak|postgres|prom/prometheus|grafana/grafana|vllm')
+IMAGES=$(docker images --format "{{.Repository}}:{{.Tag}} {{.ID}}" | grep -Ei 'ffm-hub|keycloak|postgres|prom/prometheus|grafana/grafana|vllm')
 
 if [ -z "$IMAGES" ]; then
   echo "沒有找到任何相關 image"
@@ -45,7 +45,7 @@ done
 
 # 尋找所有與 vllm 有關的 container 並移除
 echo "尋找 vLLM 相關容器..."
-VLLM_CONTAINERS=$(docker ps -a --filter "ancestor=$(docker images | grep -i vllm | awk '{print $3}')" --format "{{.ID}}")
+VLLM_CONTAINERS=$(docker ps -a --format "{{.ID}} {{.Image}}" | grep -i vllm | awk '{print $1}')
 for cid in $VLLM_CONTAINERS; do
   echo "停止並刪除 vLLM 容器：$cid"
   docker stop "$cid" 2>/dev/null || true

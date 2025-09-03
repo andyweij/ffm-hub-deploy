@@ -109,40 +109,20 @@ fi
 
 echo "憑證產生腳本執行完畢。"
 
-if [ ! -d "$CERT_DIR" ] || [ ! -f "$ENV_FILE" ] || [ ! -f "$SECRET_FILE" ]; then
+if [ ! -d "$CERT_DIR" ] || [ ! -f "$ENV_FILE" ]; then
     echo "請確認憑證目錄 ($CERT_DIR) 與 .env 檔案 ($ENV_FILE) 是否存在"
     exit 1
 fi
 
 # 清理 .env 和 S3_secret.txt 的換行符和 BOM---------
-sed -i -e 's/\r$//' "$ENV_FILE" "$SECRET_FILE"
-sed -i '1s/^\xEF\xBB\xBF//' "$ENV_FILE" "$SECRET_FILE"
+sed -i -e 's/\r$//' "$ENV_FILE"
+sed -i '1s/^\xEF\xBB\xBF//' "$ENV_FILE"
 
 # 在 while 迴圈之前，加入這段檢查
 if [ ! -s "$ENV_FILE" ] || [ -n "$(tail -c1 "$ENV_FILE")" ]; then
     echo "" >> "$ENV_FILE"
 fi
 
-# --- 核心邏輯 ---
-echo "正在讀取來源檔案 [$SECRET_FILE] 並更新目標檔案 [$ENV_FILE]..."
-
-# 逐行讀取 secret 檔案
-while IFS= read -r line || [[ -n "$line" ]]; do
-    if [[ -z "$line" ]]; then
-        continue
-    fi
-
-    # 提取 KEY，移除空白和隱藏字元
-    KEY=$(echo "$line" | cut -d'=' -f1 | tr -d '[:space:]\r')
-    if grep -qE "^[[:space:]]*${KEY}=.*" "$ENV_FILE"; then
-        echo "更新 KEY: $KEY"
-        sed -i "s#^[[:space:]]*${KEY}=.*#${line}#" "$ENV_FILE"
-    else
-        echo "新增 KEY: $KEY"
-        echo "$line" >> "$ENV_FILE"
-    fi
-done < "$SECRET_FILE"
-echo ".env 檔案更新完成。"
 
 # 重新載入 .env，讓後續的腳本能用到最新的 IP
 echo "Reloading .env file..."
@@ -157,7 +137,7 @@ if [ -z "$HARBOR_USERNAME" ] || [ -z "$HARBOR_PASSWORD" ] || [ -z "$HARBOR_REGIS
 fi
 
 
-if [ -z "$S3_SECRET_KEY" ] || [ -z "$S3_ACCESS_KEY" ] || [ -z "$S3_END_POINT" ] || [ -z "$S3_BUCKET_NAME" ] || [ -z "$S3_PREFIX" ]; then
+if [ -z "$S3_END_POINT" ] || [ -z "$S3_BUCKET_NAME" ] || [ -z "$S3_PREFIX" ]; then
     echo "$ENV_FILE s3 setting parameter may be empty"
     exit 1
 fi
