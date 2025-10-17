@@ -103,23 +103,38 @@ else
     INSTALLED+=("NVIDIA Driver")
 fi
 
-# 4. 安裝 NVIDIA Container Toolkit
+# ==============================================================================
+# 在這裡設定您想安裝的 nvidia-container-toolkit 精確版本
+# 您可以透過指令 `apt-cache madison nvidia-container-toolkit` 查詢所有可用的版本
+TOOLKIT_VERSION="1.17.5-1"
+# ==============================================================================
+
 if dpkg -s nvidia-container-toolkit >/dev/null 2>&1; then
     echo "NVIDIA Container Toolkit 已安裝，跳過安裝步驟。"
-	SKIPPED+=("NVIDIA Container Toolkit")
+    SKIPPED+=("NVIDIA Container Toolkit")
 else
-	echo "Installing NVIDIA Container Toolkit..."
-	curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
-	curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
-		sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
-		sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-	sudo sed -i -e '/experimental/ s/^#//g' /etc/apt/sources.list.d/nvidia-container-toolkit.list
-	sudo apt-get update
-	sudo apt-get install -y nvidia-container-toolkit || {
-		echo "Failed to install NVIDIA Container Toolkit"
-		exit 1
-	}
-	INSTALLED+=("NVIDIA Container Toolkit")
+    echo "正在安裝 NVIDIA Container Toolkit 版本 ${TOOLKIT_VERSION}..."
+    curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+    curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+        sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+        sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+    
+    # 註解：下面這行是啟用實驗性套件庫，通常情況下可能不需要，除非您要安裝的版本在其中
+    # sudo sed -i -e '/experimental/ s/^#//g' /etc/apt/sources.list.d/nvidia-container-toolkit.list
+    
+    sudo apt-get update
+    
+    # 關鍵修改：在套件名稱後方加上 "=版本號" 來指定版本
+    # 同時安裝 base 套件以確保版本一致性
+    sudo apt-get install -y \
+        nvidia-container-toolkit=${TOOLKIT_VERSION} \
+        nvidia-container-toolkit-base=${TOOLKIT_VERSION} || {
+        echo "安裝 NVIDIA Container Toolkit 失敗" >&2
+        exit 1
+    }
+    
+    echo "NVIDIA Container Toolkit 版本 ${TOOLKIT_VERSION} 安裝成功。"
+    INSTALLED+=("NVIDIA Container Toolkit")
 fi
 
 sudo nvidia-ctk runtime configure --runtime=docker

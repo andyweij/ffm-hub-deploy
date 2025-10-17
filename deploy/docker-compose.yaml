@@ -1,6 +1,6 @@
 services:
   aiportal:
-    image: 202.5.253.162:443/ffm-hub/aiportal:1.1.7
+    image: 202.5.253.162:443/ffm-hub/aiportal:1.2.1
     container_name: aiportal
     ports:
       - "443:8443"
@@ -27,7 +27,7 @@ services:
     networks:
       - afs-ai-hub-network
   api-relay:
-    image: 202.5.253.162:443/ffm-hub/api-relay:0.5.0
+    image: 202.5.253.162:443/ffm-hub/api-relay:0.6.1
     container_name: api-relay
     runtime: nvidia
     ports:
@@ -61,6 +61,10 @@ services:
       - MODEL_CONFIG=${MODEL_CONFIG}
       - LOCAL_DIR=${LOCAL_DIR}
       - LOCAL_AGENT_DIR=${LOCAL_AGENT_DIR}
+      - HARBOR_REGISTRY=${HARBOR_REGISTRY}
+      - HARBOR_PROJECT=${HARBOR_PROJECT}
+      - HARBOR_USERNAME=${HARBOR_USERNAME}
+      - HARBOR_PASSWORD=${HARBOR_PASSWORD}
     command: >
       sh -c "
         chmod +x /app/wait-for-it.sh &&

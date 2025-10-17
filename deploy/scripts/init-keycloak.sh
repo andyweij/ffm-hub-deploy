@@ -99,6 +99,7 @@ while [ -z "$ACCESS_TOKEN" ] || [ "$ACCESS_TOKEN" = "null" ]; do
     sleep 10
 done
 # TERMS_AND_CONDITIONS
+: <<'SKIP'
 echo "Enabling Terms and Conditions required action for realm $REALM_NAME..."
 curl -k -s -X PUT \
   "${KEYCLOAK_URL}/admin/realms/${REALM_NAME}/authentication/required-actions/TERMS_AND_CONDITIONS" \
@@ -114,6 +115,7 @@ curl -k -s -X PUT \
 		"config": {}
   }' || { echo "Failed to enable Terms and Conditions"; exit 1; }
 echo "Terms and Conditions set as default action for new users."
+SKIP
 
 # 創建用戶
 echo "Creating new user $NEW_USER in realm $REALM_NAME..."
