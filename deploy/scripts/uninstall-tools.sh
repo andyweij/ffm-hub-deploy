@@ -59,6 +59,7 @@ fi
 # Docker Compose plugin
 if was_installed_by_us "Docker Compose"; then
     echo "Removing Docker Compose plugin..."
+	sudo apt-mark unhold docker-compose-plugin
     sudo apt-get remove -y docker-compose-plugin
     REMOVED+=("Docker Compose")
 fi
@@ -66,6 +67,7 @@ fi
 # Docker
 if was_installed_by_us "Docker"; then
     echo "Removing Docker..."
+	sudo apt-mark unhold docker-ce docker-ce-cli containerd.io
     sudo apt-get remove -y docker-ce docker-ce-cli containerd.io
     sudo rm -f /etc/apt/sources.list.d/docker.list
     sudo rm -f /usr/share/keyrings/docker-archive-keyring.gpg

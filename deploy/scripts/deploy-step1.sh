@@ -35,6 +35,9 @@ fi
 # 檢查是否需要執行初始安裝
 echo "Running initial installation process..."
 
+DOCKER_VERSION="5:28.1.1-1~ubuntu.22.04~jammy"
+DOCKER_COMPOSE_VERSION="2.29.1-1~ubuntu.22.04~jammy"
+
 if command -v docker >/dev/null 2>&1; then
     echo "Docker 已安裝，跳過安裝步驟。"
 	SKIPPED+=("Docker")
@@ -50,29 +53,35 @@ else
 	# 添加 Docker APT 軟體庫
 	echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
-	# 更新並安裝 Docker
-	sudo apt-get update
-	sudo apt-get install -y docker-ce docker-ce-cli containerd.io || {
-		echo "Failed to install Docker"
-		exit 1
-	}
+    # 更新並安裝指定版本的 Docker
+    sudo apt-get update
+    sudo apt-get install -y \
+        docker-ce=${DOCKER_VERSION} \
+        docker-ce-cli=${DOCKER_VERSION} \
+        containerd.io || {
+        echo "Failed to install Docker"
+        exit 1
+    }
 
-	# 啟動並啟用 Docker 服務
-	sudo systemctl start docker
-	sudo systemctl enable docker
+    
+    # 啟動並啟用 Docker 服務
+    sudo systemctl start docker
+    sudo systemctl enable docker
+    
     INSTALLED+=("Docker")
 fi
 
-if docker compose version>/dev/null 2>&1; then
+if docker compose version >/dev/null 2>&1; then
     echo "Docker compose 已安裝，跳過安裝步驟。"
     SKIPPED+=("Docker Compose")
 else
-	# 安裝 Docker Compose 插件
-	echo "Installing Docker Compose plugin..."
-	sudo apt-get install -y docker-compose-plugin || {
-		echo "Failed to install Docker Compose plugin"
-		exit 1
-	}
+    # 安裝指定版本的 Docker Compose 插件
+    echo "Installing Docker Compose plugin version ${DOCKER_COMPOSE_VERSION}..."
+    sudo apt-get install -y docker-compose-plugin=${DOCKER_COMPOSE_VERSION} || {
+        echo "Failed to install Docker Compose plugin"
+        exit 1
+    }
+    
     INSTALLED+=("Docker Compose")
 fi
 
@@ -95,16 +104,16 @@ if nvidia-smi >/dev/null 2>&1; then
     SKIPPED+=("NVIDIA Driver")
 else
     echo "Installing NVIDIA driver..."
+	DRIVER_VERSION="nvidia-driver-580" # 確保與您安裝的版本一致
 	sudo apt-get install -y ubuntu-drivers-common
 	sudo apt install linux-headers-$(uname -r) build-essential dkms -y
 	wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
 	sudo dpkg -i cuda-keyring_1.1-1_all.deb
 	sudo apt update
-	sudo apt install nvidia-driver-580 -y || {
-	#sudo apt install nvidia-driver-570 -y || {
+	sudo apt install ${DRIVER_VERSION} -y || {
 		echo "Failed to install NVIDIA driver"
 		exit 1
-	}
+	}    
     INSTALLED+=("NVIDIA Driver")
 fi
 
@@ -124,7 +133,6 @@ else
         exit 1
       }
       INSTALLED+=("NVIDIA Container Toolkit")
-
 fi
 
 sudo nvidia-ctk runtime configure --runtime=docker
@@ -143,6 +151,37 @@ else
 fi
 
 echo "--------------------------------------------------"
+
+if [ ${#INSTALLED[@]} -gt 0 ] || [ ${#SKIPPED[@]} -gt 0 ]; then
+    echo "--------------------------------------------------"
+    echo "🔒 執行套件版本鎖定 (APT Hold) 以確保環境穩定性..."
+
+    # 1. 核心套件鎖定
+    KERNEL_PACKAGES="linux-generic linux-image-generic linux-headers-generic"
+    echo "Holding kernel packages: $KERNEL_PACKAGES"
+    sudo apt-mark hold $KERNEL_PACKAGES || echo "WARNING: Failed to hold kernel packages. Check permissions."
+
+    # 2. Docker 及 NVIDIA 關鍵套件鎖定
+    CRITICAL_PACKAGES=(
+        docker-ce
+        docker-ce-cli
+        containerd.io
+        docker-compose-plugin
+        nvidia-driver-580  # 鎖定您的驅動程式版本
+    )
+    
+    for pkg in "${CRITICAL_PACKAGES[@]}"; do
+        if sudo apt-mark hold "$pkg"; then
+            echo "Successfully held $pkg"
+        else
+            echo "WARNING: Failed to hold $pkg. This package may auto-update."
+        fi
+    done
+    
+    INSTALLED+=("Applied APT Holds for Stability")
+    echo "鎖定操作完成。"
+fi
+
 echo "安裝總結："
 if [ ${#INSTALLED[@]} -gt 0 ]; then
     echo "已安裝："
