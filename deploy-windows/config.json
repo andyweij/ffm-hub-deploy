@@ -1,0 +1,68 @@
+{
+    "Global": {
+        "VM_IP": "",
+        "JDK_PATH": "",
+        "GPU_PROVIDER": "amd",
+        "TZ": "Asia/Taipei",
+        "CERT_PASSWORD": "changeit"
+    },
+    "Database": {
+        "POSTGRES_HOST": "localhost",
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_DB": "afs-ai-hub_db",
+        "POSTGRES_USER": "admin",
+        "POSTGRES_PASSWORD": "admin"
+    },
+    "Keycloak": {
+        "PORT": "8443",
+        "REALM_NAME": "ffm-realm",
+        "CLIENT_ID": "ffm",
+        "ADMIN_USERNAME": "admin",
+        "ADMIN_PASSWORD": "admin",
+        "APP_USERNAME": "afs-admin",
+        "APP_PASSWORD": "afs-admin",
+        "DB_NAME": "keycloak",
+        "DB_USER": "keycloak",
+        "DB_PASSWORD": "keycloak"
+    },
+    "ApiRelay": {
+        "SERVER_PORT": "8080",
+        "MODEL_ENGINE_TYPE": "llama-cpp",
+        "RUNTIME_TYPE": "native",
+        "S3_END_POINT": "https://cos.twcc.ai/",
+        "S3_BUCKET_NAME": "afsaihubggufcos",
+        "MODEL_PREFIX": "models",
+        "MODEL_LIST": "llama-cpp-modelList.json",
+        "AGENT_LIST": "windows-agentList.json",
+        "AGENT_PREFIX": "agents",
+        "LOCAL_DIR": "afs-ai-hub",
+        "LOCAL_AGENT_DIR": "agents",
+        "LOCAL_MODEL_DIR": "models",
+        "HUB_NAME": "afs-ai-hub",
+        "HARBOR_REGISTRY": "202.5.253.162:443",
+        "HARBOR_PROJECT": "ffm-hub",
+        "HARBOR_USERNAME": "admin",
+        "HARBOR_PASSWORD": "admin",
+        "TIMEOUT_ASYNC_MS": "600000",
+        "TIMEOUT_KEYCLOAK_MS": "10000"
+    },
+    "AiPortal": {
+        "SERVER_PORT": "443",
+        "SPRING_PROFILES_ACTIVE": "stage",
+        "GRAFANA_URL": "http://localhost:3000",
+        "API_DOC_URL": "https://hackmd.io/@afs-ai-hub/api-doc",
+        "PLATFORM_MANAGEMENT_OVERVIEW_ENABLED": "true",
+        "PLATFORM_MANAGEMENT_USER_MANAGEMENT_ENABLED": "true",
+        "PLATFORM_MANAGEMENT_GROUP_MANAGEMENT_ENABLED": "true",
+        "PLATFORM_MANAGEMENT_LDAP_MANAGEMENT_ENABLED": "true",
+        "PLATFORM_MANAGEMENT_MODEL_MANAGEMENT_ENABLED": "true",
+        "PLATFORM_MANAGEMENT_AGENT_MANAGEMENT_ENABLED": "true",
+        "PLATFORM_MANAGEMENT_API_ENDPOINT_MANAGEMENT_ENABLED": "true",
+        "PLATFORM_MANAGEMENT_API_KEY_MANAGEMENT_ENABLED": "true",
+        "PLATFORM_MANAGEMENT_SYSTEN_LOG_MANAGEMENT_ENABLED": "true",
+        "IP_MODE_ENABLED": "false",
+        "IP_MODE_APIMODULE_PATH": "api",
+        "IP_MODE_FRONTEND_KEYCLOAK_PATH": "keycloak",
+        "IP_MODE_API_DOC_PATH": "api-doc"
+    }
+}

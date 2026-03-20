@@ -13,7 +13,7 @@
   section
 >
   <#if section="header">
-    <img src="${url.resourcesPath}/img/logoV3.png" alt="Logo" style="display: block; margin: 0 auto 10px auto; width: 220px;" style="margin-top:20px">
+    <img src="${url.resourcesPath}/img/logoV4.png" alt="Logo" style="display: block; margin: 0 auto 10px auto; width: 220px;" style="margin-top:20px">
     <h2 class="subtitle fw-b text-center text-xl flex items-center justify-center" style="font-size: 1.75rem; margin-bottom: 15px;">
       ${msg("welcome")}
     </h2>

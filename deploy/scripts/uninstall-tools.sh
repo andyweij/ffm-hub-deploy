@@ -4,6 +4,7 @@ set -e
 # 基本設定
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT=$(dirname "$SCRIPT_DIR")
+ENV_FILE="$PROJECT_ROOT/.env"
 
 # 日誌資料夾與檔案設定
 LOG_DIR="$PROJECT_ROOT/logs"
@@ -18,6 +19,12 @@ echo "Starting uninstall script : $(date)"
 if [ ! -f "$INSTALLED_LOG" ]; then
     echo "找不到安裝紀錄檔案：$INSTALLED_LOG，無法進行卸載"
     exit 1
+fi
+
+if [ -f "$ENV_FILE" ]; then
+    set -o allexport
+    source "$ENV_FILE"
+    set +o allexport
 fi
 
 # 讀取已安裝項目
@@ -89,25 +96,25 @@ if was_installed_by_us "Add user to docker group"; then
 fi
 
 # 將要刪除的目標路徑存成變數，方便管理且不易出錯
-TARGET_DIR="/opt/vllm-models"
+TARGET_DIR="/opt/${LOCAL_DIR}"
 
 # 首先，使用 -d 判斷目標路徑是否存在且是一個資料夾
-if [ -d "$TARGET_DIR" ]; then
+if [ -n "${LOCAL_DIR}" ] && [ -d "$TARGET_DIR" ]; then
     echo "發現目標資料夾 ${TARGET_DIR}，正在嘗試刪除..."
     
-    # 執行刪除
-    sudo rm -R "$TARGET_DIR"
+    # 使用 -rf 確保自動化過程不間斷
+    sudo rm -rf "$TARGET_DIR"
     
-    # 檢查刪除操作的返回碼
     if [ $? -eq 0 ]; then
         echo "成功刪除資料夾: ${TARGET_DIR}"
     else
-        echo "錯誤：刪除資料夾 ${TARGET_DIR} 失敗。請檢查權限或錯誤訊息。"
+        echo "錯誤：刪除失敗，請檢查權限。"
         exit 1
     fi
+elif [ -z "${LOCAL_DIR}" ]; then
+    echo "警告：環境變數 LOCAL_DIR 未定義，跳過刪除步驟以策安全。"
 else
-    # 如果資料夾一開始就不存在
-    echo "目標資料夾 ${TARGET_DIR} 本來就不存在，無需執行刪除操作。"
+    echo "目標資料夾 ${TARGET_DIR} 不存在，無需操作。"
 fi
 
 # 如果程式能走到這裡，代表最終狀態是成功的 (資料夾已不存在)

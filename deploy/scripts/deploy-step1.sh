@@ -18,6 +18,22 @@ echo "Starting deployment script : $(date)"
 INSTALLED=()
 SKIPPED=()
 
+# 取得絕對路徑（避免相對路徑導致 sudo 匹配失敗）
+CLEANUP_SCRIPT_PATH="${SCRIPT_DIR}/cleanup-service.sh"
+CURRENT_USER=$(whoami)
+
+# 1. 加上 !requiretty 確保背景執行不報錯
+# 2. 加上 /usr/bin/rm 權限
+# 3. 確保 bash 執行腳本的路徑完全一致
+SUDO_CONF_CONTENT="Defaults:${CURRENT_USER} !requiretty
+${CURRENT_USER} ALL=(ALL) NOPASSWD: /usr/bin/jq, /usr/bin/systemctl, /usr/bin/cp, /usr/bin/tee, /usr/bin/rm, /usr/bin/bash ${CLEANUP_SCRIPT_PATH}"
+
+# 寫入設定檔
+echo "$SUDO_CONF_CONTENT" | sudo tee "/etc/sudoers.d/${CURRENT_USER}-deploy" > /dev/null
+sudo chmod 0440 "/etc/sudoers.d/${CURRENT_USER}-deploy"
+
+echo "已為使用者 ${CURRENT_USER} 配置完整的免密碼 sudo 權限。"
+
 if command -v curl >/dev/null 2>&1; then
     echo "curl 已安裝，跳過安裝步驟。"
     SKIPPED+=("curl")
@@ -35,8 +51,16 @@ fi
 # 檢查是否需要執行初始安裝
 echo "Running initial installation process..."
 
-DOCKER_VERSION="5:28.1.1-1~ubuntu.22.04~jammy"
-DOCKER_COMPOSE_VERSION="2.29.1-1~ubuntu.22.04~jammy"
+# --- 自動取得系統版本與代號 (最小浮動改法) ---
+OS_VER=$(lsb_release -rs 2>/dev/null)    # 輸出範例: 24.04
+OS_CODE=$(lsb_release -cs 2>/dev/null)   # 輸出範例: noble
+
+# 將取得的版本資訊動態帶入
+DOCKER_VERSION="5:28.1.1-1~ubuntu.${OS_VER}~${OS_CODE}"
+DOCKER_COMPOSE_VERSION="2.29.1-1~ubuntu.${OS_VER}~${OS_CODE}"
+
+echo "Detected OS: Ubuntu $OS_VER ($OS_CODE)"
+echo "Using Version String: $DOCKER_VERSION"
 
 if command -v docker >/dev/null 2>&1; then
     echo "Docker 已安裝，跳過安裝步驟。"
@@ -154,7 +178,7 @@ echo "--------------------------------------------------"
 
 if [ ${#INSTALLED[@]} -gt 0 ] || [ ${#SKIPPED[@]} -gt 0 ]; then
     echo "--------------------------------------------------"
-    echo "🔒 執行套件版本鎖定 (APT Hold) 以確保環境穩定性..."
+    echo "?? 執行套件版本鎖定 (APT Hold) 以確保環境穩定性..."
 
     # 1. 核心套件鎖定
     KERNEL_PACKAGES="linux-generic linux-image-generic linux-headers-generic"
@@ -178,10 +202,12 @@ if [ ${#INSTALLED[@]} -gt 0 ] || [ ${#SKIPPED[@]} -gt 0 ]; then
         fi
     done
     
+	# 確保這一行沒有多餘的反引號
     INSTALLED+=("Applied APT Holds for Stability")
     echo "鎖定操作完成。"
 fi
 
+# 確保這行 echo 兩端的雙引號是成對的，且沒有反引號
 echo "安裝總結："
 if [ ${#INSTALLED[@]} -gt 0 ]; then
     echo "已安裝："
@@ -215,7 +241,8 @@ User=$(whoami)
 WorkingDirectory=${SCRIPT_DIR}
 ExecStart=${SCRIPT_DIR}/deploy-all.sh
 # --- 新增這一行，在主要任務成功後執行清理 ---
-ExecStartPost=${SCRIPT_DIR}/cleanup-service.sh deploy-all.service
+# 務必加上 /usr/bin/bash，以精確匹配 sudoers 的 NOPASSWD 規則
+ExecStartPost=/usr/bin/bash ${CLEANUP_SCRIPT_PATH} deploy-all.service
 
 StandardOutput=append:${LOG_DIR}/install.log
 StandardError=append:${LOG_DIR}/install.log

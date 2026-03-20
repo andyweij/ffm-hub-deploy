@@ -13,7 +13,7 @@ ROLE_NAME="admin"
 ADMIN_USERNAME="admin"
 ADMIN_PASSWORD="admin"
 CLIENT_ID="ffm"
-
+CLIENT_ID_GRAFANA="grafana-oauth"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
 if [ ! -f "$ENV_FILE" ]; then
@@ -202,6 +202,58 @@ curl -k -s -X PUT \
 echo "Client $CLIENT_ID updated with Valid Redirect URI $LOCAL_VM_IP!"
 
 echo "Client $CLIENT_ID updated with Valid Redirect URI $LOCAL_VM_IP!"
+
+echo "Retrieving client ID for $CLIENT_ID in realm $REALM_NAME..."
+CLIENT_RESPONSE=$(curl -k -s -X GET \
+  "${KEYCLOAK_URL}/admin/realms/${REALM_NAME}/clients?clientId=${CLIENT_ID_GRAFANA}" \
+  -H "Authorization: Bearer $ACCESS_TOKEN")
+
+CLIENT_GRAFANA_INTERNAL_ID=$(echo "$CLIENT_RESPONSE" | jq -r '.[0].id')
+if [ -z "$CLIENT_GRAFANA_INTERNAL_ID" ] || [ "$CLIENT_GRAFANA_INTERNAL_ID" = "null" ]; then
+    echo "Failed to retrieve client ID for $CLIENT_ID: $CLIENT_RESPONSE"
+    exit 1
+fi
+
+# 定義基礎變數
+LOCAL_VM_BASE="http://${VM_IP}:3000" # 假設這是你的 Root 路徑
+LOCAL_VM_WILDCARD="${LOCAL_VM_BASE}/*"
+
+echo "Updating Client Configuration for $CLIENT_ID..."
+
+# 組合 JSON Data
+# 注意：post.logout.redirect.uris 必須放在 attributes 物件中
+# webOrigins 通常包含 "+" (代表允許所有 Valid Redirect URIs) 或是明確指定網址
+generate_post_data()
+{
+  cat <<EOF
+{
+  "rootUrl": "${LOCAL_VM_BASE}/",
+  "adminUrl": "${LOCAL_VM_BASE}/",
+  "baseUrl": "",
+  "redirectUris": [
+    "${LOCAL_VM_WILDCARD}"
+  ],
+  "webOrigins": [
+    "${LOCAL_VM_BASE}/"
+  ],
+  "attributes": {
+    "post.logout.redirect.uris": "${LOCAL_VM_WILDCARD}"
+  }
+}
+EOF
+}
+
+# 執行 CURL 更新
+curl -k -s -X PUT \
+  "${KEYCLOAK_URL}/admin/realms/${REALM_NAME}/clients/${CLIENT_GRAFANA_INTERNAL_ID}" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "$(generate_post_data)" || { echo "Failed to update client $CLIENT_ID"; exit 1; }
+
+echo "Client $CLIENT_ID updated successfully with full configuration!"
+
+
+
 
 # 更新 Realm 的登入主題
 echo "Updating login theme for realm $REALM_NAME to AIPORTAL-THEME..."

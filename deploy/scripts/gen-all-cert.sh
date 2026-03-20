@@ -4,10 +4,10 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT=$(dirname "$SCRIPT_DIR")
 CERT_DIR="${PROJECT_ROOT}/certs"
+SERVER_CERT_DIR="${CERT_DIR}/server"
 PASSWORD="changeit"
 DAYS=3650
 ENV_FILE="$PROJECT_ROOT/.env"
-SERVICES=("aiportal" "api-relay" "keycloak")
 EXT_TEMPLATE="${CERT_DIR}/v3_ext_template.ext"
 
 # 1. 檢查 .env 檔案是否存在
@@ -31,82 +31,56 @@ IP="${VM_IP}"
 
 # ========== Clean Previous Output ==========
 rm -rf "$CERT_DIR"
-mkdir -p "$CERT_DIR"
+mkdir -p "$SERVER_CERT_DIR"
 
-# ========== Create v3_ca.ext Template ==========
-cat > $EXT_TEMPLATE <<EOF
-basicConstraints = critical,CA:TRUE
-keyUsage = critical, digitalSignature, keyCertSign, cRLSign
+# ========== Create v3_ext Template with Multiple SANs ==========
+# 加入 IP 以及容器名稱，方便容器間通訊與外部存取共用
+cat > "$EXT_TEMPLATE" <<EOF
+basicConstraints = critical,CA:FALSE
+keyUsage = critical, digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
 subjectKeyIdentifier = hash
 authorityKeyIdentifier = keyid:always,issuer
-subjectAltName = IP:$IP
+subjectAltName = @alt_names
+
+[alt_names]
+IP.1 = $IP
+IP.2 = 127.0.0.1
+DNS.1 = aiportal
+DNS.2 = api-relay
+DNS.3 = keycloak
+DNS.4 = localhost
 EOF
 
-# ========== Main Process ==========
-for service in "${SERVICES[@]}"; do
-  echo "Generating certificate for: $service"
+# ========== Main Process (Single General Certificate) ==========
+echo "Generating general server certificate..."
 
-  TARGET_DIR="${CERT_DIR}/$service"
-  mkdir -p "$TARGET_DIR"
+# Step 1: Generate Private Key
+openssl genpkey -algorithm RSA -out "$SERVER_CERT_DIR/private.key" -pkeyopt rsa_keygen_bits:2048
 
-  # Step 1: Generate Private Key
-  openssl genpkey -algorithm RSA -out "$TARGET_DIR/private.key" -pkeyopt rsa_keygen_bits:2048
+# Step 2: Create CSR
+openssl req -new -key "$SERVER_CERT_DIR/private.key" \
+  -out "$SERVER_CERT_DIR/request.csr" \
+  -subj "/C=TW/ST=Taiwan/L=Taipei/O=AFS/OU=Server/CN=$IP"
 
-  # Step 2: Create CSR
-  openssl req -new -key "$TARGET_DIR/private.key" \
-    -out "$TARGET_DIR/request.csr" \
-    -subj "/C=TW/ST=Taiwan/L=Taipei/O=AFS/OU=$service/CN=$IP"
+# Step 3: Sign Certificate (Self-signed as CA for simplicity in this dev/stage setup)
+openssl x509 -req -in "$SERVER_CERT_DIR/request.csr" \
+  -signkey "$SERVER_CERT_DIR/private.key" \
+  -out "$SERVER_CERT_DIR/certificate.crt" \
+  -days $DAYS -sha256 -extfile "$EXT_TEMPLATE"
 
-  # Step 3: Sign Certificate
-  openssl x509 -req -in "$TARGET_DIR/request.csr" \
-    -signkey "$TARGET_DIR/private.key" \
-    -out "$TARGET_DIR/certificate.crt" \
-    -days $DAYS -sha256 -extfile "$EXT_TEMPLATE"
+# Step 4: Verify SAN
+echo "Verifying SAN..."
+openssl x509 -in "$SERVER_CERT_DIR/certificate.crt" -noout -text | grep -A1 "Subject Alternative Name"
 
-  # Step 4: Verify SAN
-  openssl x509 -in "$TARGET_DIR/certificate.crt" -noout -text | grep -A1 "Subject Alternative Name"
+# Step 5: Generate PKCS12 Keystore
+openssl pkcs12 -export \
+  -in "$SERVER_CERT_DIR/certificate.crt" \
+  -inkey "$SERVER_CERT_DIR/private.key" \
+  -out "$SERVER_CERT_DIR/keystore.p12" \
+  -name "server" \
+  -passout pass:$PASSWORD
 
-  # Step 5: Generate PKCS12 Keystore
-  openssl pkcs12 -export \
-    -in "$TARGET_DIR/certificate.crt" \
-    -inkey "$TARGET_DIR/private.key" \
-    -out "$TARGET_DIR/keystore.p12" \
-    -name "$service" \
-    -passout pass:$PASSWORD
-
-  # Step 6: Convert to JKS Keystore (Optional)
-#  keytool -importkeystore \
-#    -destkeystore "$TARGET_DIR/keystore.jks" \
-#    -srckeystore "$TARGET_DIR/keystore.p12" \
-#    -srcstoretype PKCS12 \
-#    -alias "$service" \
-#    -deststorepass $PASSWORD \
-#    -srcstorepass $PASSWORD
-
-  # Step 7: Export PEM
-#  openssl x509 -in "$TARGET_DIR/certificate.crt" -out "$TARGET_DIR/certificate.pem" -outform PEM
-
-  echo "$service certificate generated successfully"
-done
-
-# ========== Check if keytool is Installed ==========
-#if ! command -v keytool &> /dev/null; then
-#  echo "keytool not found. Installing OpenJDK..."
-#  sudo apt update
-#  sudo apt install default-jdk -y
-#else
-#  echo "keytool already installed. Skipping installation."
-#fi
-
-# ========== Create Truststores ==========
-#echo "Creating truststores..."
-
-# aiportal imports api-relay certificate
-#keytool -importcert -file ./certs/api-relay/certificate.pem -alias api-relay \
-#  -keystore ./certs/aiportal/truststore.jks -storepass $PASSWORD -noprompt
-
-# api-relay imports keycloak certificate
-#keytool -importcert -file ./certs/keycloak/certificate.pem -alias keycloak \
-#  -keystore ./certs/api-relay/truststore.jks -storepass $PASSWORD -noprompt
-
+echo "Server certificate generated successfully in $SERVER_CERT_DIR"
 echo "All certificates have been created successfully."
+

@@ -1,12 +1,13 @@
 services:
   aiportal:
-    image: 202.5.253.162:443/ffm-hub/aiportal:1.3.1
+    image: 202.5.253.162:443/ffm-hub/aiportal:1.10.6
     container_name: aiportal
     ports:
       - "443:8443"
+    restart: unless-stopped
     volumes:
-      - ./certs/aiportal/keystore.p12:/app/certs/keystore.p12
-      - ./certs/api-relay/certificate.crt:/app/certs/certificate.crt
+      - ./certs/server/keystore.p12:/app/certs/keystore.p12
+      - ./certs/server/certificate.crt:/app/certs/certificate.crt
     environment:
       - SPRING_PROFILES_ACTIVE=stage
       - APIMODULE_URL=https://api-relay:8443
@@ -20,47 +21,76 @@ services:
       - SERVER_SSL_KEYSTORE_TYPE=PKCS12
       - GRAFANA_URL=http://${VM_IP}:3000
       - API_DOC_URL=https://hackmd.io/@afs-ai-hub/api-doc
+      # 管理介面開關
+      - PLATFORM_MANAGEMENT_OVERVIEW_ENABLED=true
+      - PLATFORM_MANAGEMENT_USER_MANAGEMENT_ENABLED=true
+      - PLATFORM_MANAGEMENT_GROUP_MANAGEMENT_ENABLED=true
+      - PLATFORM_MANAGEMENT_LDAP_MANAGEMENT_ENABLED=true
+      - PLATFORM_MANAGEMENT_MODEL_MANAGEMENT_ENABLED=true
+      - PLATFORM_MANAGEMENT_AGENT_MANAGEMENT_ENABLED=true
+      - PLATFORM_MANAGEMENT_API_ENDPOINT_MANAGEMENT_ENABLED=true
+      - PLATFORM_MANAGEMENT_API_KEY_MANAGEMENT_ENABLED=true
+      - PLATFORM_MANAGEMENT_SYSTEN_LOG_MANAGEMENT_ENABLED=true
+      # 是否使用IP模式 啟用後會自己抓取本機IP+Path與其他元件溝通
+      - IP_MODE_ENABLED=false
+      - IP_MODE_APIMODULE_PATH="api"
+      - IP_MODE_FRONTEND_KEYCLOAK_PATH="keycloak"
+      - IP_MODE_API_DOC_PATH="api-doc"
     command: >
-      sh -c "keytool -delete -alias api-relay -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit || true &&
-             keytool -importcert -trustcacerts -noprompt -alias api-relay -file /app/certs/certificate.crt -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit &&
+      sh -c "keytool -delete -alias server -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit || true &&
+             keytool -importcert -trustcacerts -noprompt -alias server -file /app/certs/certificate.crt -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit &&
              java -jar app.jar"
     networks:
       - afs-ai-hub-network
   api-relay:
-    image: 202.5.253.162:443/ffm-hub/api-relay:0.7.0
+    image: 202.5.253.162:443/ffm-hub/api-relay:0.8.14
     container_name: api-relay
     runtime: nvidia
     ports:
-      - "${API_RELAY_HOST_PORT}:8443"
+      - "${API_RELAY_PORT}:8443"
+    restart: unless-stopped
     volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
       - /var/run/docker.sock:/var/run/docker.sock
       - /opt/${LOCAL_DIR}:/opt/${LOCAL_DIR}
-      - ./certs/api-relay/keystore.p12:/app/certs/keystore.p12
-      - ./certs/keycloak/certificate.crt:/app/certs/certificate.crt
+      - ./certs/server/keystore.p12:/app/certs/keystore.p12
+      - ./certs/server/certificate.crt:/app/certs/certificate.crt
       - ./util/wait-for-it.sh:/app/wait-for-it.sh
+      - /opt/${LOCAL_DIR}/logs/api-relay:/app/logs
     environment:
-      - NVIDIA_VISIBLE_DEVICES=all
-      - KEYCLOAK_SERVER_URL=https://${VM_IP}:8443
-      - VLLM_HOST=${VM_IP}
+      - API_RELAY_PORT=${API_RELAY_PORT}
+      - HOST_IP=${VM_IP}
       - SERVER_PORT=8443
       - SERVER_SSL_ENABLED=true
       - SERVER_SSL_KEYSTORE=/app/certs/keystore.p12
       - SERVER_SSL_KEYSTORE_PASSWORD=changeit
       - SERVER_SSL_KEYSTORE_TYPE=PKCS12
-      - S3_END_POINT=${S3_END_POINT}
-      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
-      - S3_PREFIX=${S3_PREFIX}
+      - TZ=${TZ:-UTC}
+      # runtime type
+      - RUNTIME_TYPE=${RUNTIME_TYPE}
+      # gpu provider
+      - GPU_PROVIDER=${GPU_PROVIDER}
+      # nvidia-docker
+      - NVIDIA_VISIBLE_DEVICES=all
+      # product name
+      - HUB_NAME=${HUB_NAME}
+      #keycloak
+      - KEYCLOAK_SERVER_URL=https://${VM_IP}:8443
       - KEYCLOAK_USERNAME=${NEW_USER}
       - KEYCLOAK_PASSWORD=${NEW_USER_PASSWORD}
+      #S3
+      - S3_END_POINT=${S3_END_POINT}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - MODEL_PREFIX=${MODEL_PREFIX}
       - MODEL_LIST=${MODEL_LIST}
-      - HUB_NAME=${HUB_NAME}
-      - API_RELAY_HOST=https://${VM_IP}:${API_RELAY_HOST_PORT}
-      - MODEL_CONFIG=${MODEL_CONFIG}
       - AGENT_LIST=${AGENT_LIST}
       - AGENT_PREFIX=${AGENT_PREFIX}
-      - MODEL_CONFIG=${MODEL_CONFIG}
+      #local storage
       - LOCAL_DIR=${LOCAL_DIR}
+      - LOCAL_MODEL_DIR=${LOCAL_MODEL_DIR}
       - LOCAL_AGENT_DIR=${LOCAL_AGENT_DIR}
+      #harbor
       - HARBOR_REGISTRY=${HARBOR_REGISTRY}
       - HARBOR_PROJECT=${HARBOR_PROJECT}
       - HARBOR_USERNAME=${HARBOR_USERNAME}
@@ -69,8 +99,8 @@ services:
       sh -c "
         chmod +x /app/wait-for-it.sh &&
         /app/wait-for-it.sh afs-ai-hub-db:5432 --timeout=60 --strict -- echo 'Postgres is ready' &&
-        keytool -delete -alias keycloak -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit || true &&
-        keytool -importcert -trustcacerts -noprompt -alias keycloak -file /app/certs/certificate.crt -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit &&
+        keytool -delete -alias server -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit || true &&
+        keytool -importcert -trustcacerts -noprompt -alias server -file /app/certs/certificate.crt -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit &&
         java -jar app.jar"
     networks:
       - afs-ai-hub-network
@@ -79,11 +109,12 @@ services:
     container_name: afs-ai-hub-db
     volumes:
       - keycloak_db:/var/lib/postgresql/data
-      - ./config/init-multiple-dbs.sql:/docker-entrypoint-initdb.d/init-multiple-dbs.sql
+      - ../config/init-multiple-dbs.sql:/docker-entrypoint-initdb.d/init-multiple-dbs.sql
     expose:
       - 5432
     ports:
       - 5432:5432
+    restart: unless-stopped
     environment:
       - POSTGRES_DB=keycloak
       - POSTGRES_USER=keycloak
@@ -96,11 +127,12 @@ services:
     ports:
       - "8443:8443"
       - "9000:9000"
+    restart: unless-stopped
     volumes:
-      - ./certs/keycloak/certificate.crt:/opt/keycloak/conf/keycloak.crt
-      - ./certs/keycloak/private.key:/opt/keycloak/conf/keycloak.key
-      - ./config/afs-ai-hub.json:/opt/keycloak/data/import/afs-ai-hub.json
-      - ./keycloak_theme:/opt/keycloak/themes
+      - ./certs/server/certificate.crt:/opt/keycloak/conf/keycloak.crt
+      - ./certs/server/private.key:/opt/keycloak/conf/keycloak.key
+      - ../config/afs-ai-hub.json:/opt/keycloak/data/import/afs-ai-hub.json
+      - ../keycloak_theme:/opt/keycloak/themes
     environment:
       - KEYCLOAK_ADMIN=admin
       - KEYCLOAK_ADMIN_PASSWORD=admin
@@ -119,11 +151,12 @@ services:
     image: prom/prometheus:v2.54.1
     container_name: afs-ai-hub-prometheus
     extra_hosts:
-      - "host.docker.internal:host-gateway"     # allow a direct connection from container to the local machine
+      - "host.docker.internal:host-gateway" # allow a direct connection from container to the local machine
     ports:
-      - "9090:9090"   # the default port used by Prometheus
+      - "9090:9090" # the default port used by Prometheus
+    restart: unless-stopped
     volumes:
-      - ./config/prometheus.yaml:/etc/prometheus/prometheus.yml # mount Prometheus config file
+      - ../config/prometheus.yaml:/etc/prometheus/prometheus.yml # mount Prometheus config file
       - prometheus_data:/prometheus
     networks:
       - afs-ai-hub-network
@@ -134,20 +167,41 @@ services:
       - prometheus
     ports:
       - "3000:3000"
+    restart: unless-stopped
     volumes:
-      - ./config/grafana/datasources:/etc/grafana/provisioning/datasources
-      - ./config/grafana/dashboards:/etc/grafana/dashboards
-      - ./config/grafana/dashboards/dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml
+      - ../config/grafana/datasources:/etc/grafana/provisioning/datasources
+      - ../config/grafana/dashboards:/etc/grafana/dashboards
+      - ../config/grafana/dashboards/dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      # Keycloak SSO 配置
+      - GF_SERVER_ROOT_URL=http://${VM_IP}:3000
+      - GF_AUTH_GENERIC_OAUTH_ENABLED=true
+      - GF_AUTH_GENERIC_OAUTH_NAME=Keycloak SSO
+      - GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP=true
+      - GF_AUTH_GENERIC_OAUTH_CLIENT_ID=grafana-oauth
+      - GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET=La5u4P1CleaXDx8BHypFRXPXknnSSnH3
+      - GF_AUTH_GENERIC_OAUTH_SCOPES=openid profile email
+      - GF_AUTH_GENERIC_OAUTH_AUTH_URL=https://${VM_IP}:8443/realms/${REALM_NAME}/protocol/openid-connect/auth
+      - GF_AUTH_GENERIC_OAUTH_TOKEN_URL=https://${VM_IP}:8443/realms/${REALM_NAME}/protocol/openid-connect/token
+      - GF_AUTH_GENERIC_OAUTH_API_URL=https://${VM_IP}:8443/realms/${REALM_NAME}/protocol/openid-connect/userinfo
+      - GF_AUTH_GENERIC_OAUTH_EMAIL_ATTRIBUTE_PATH=email
+      - GF_AUTH_GENERIC_OAUTH_LOGIN_ATTRIBUTE_PATH=preferred_username
+      - GF_AUTH_GENERIC_OAUTH_NAME_ATTRIBUTE_PATH=name
+      - GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH=contains(realm_access.roles[*], 'admin') && 'Admin' || 'Viewer'
+      - GF_AUTH_GENERIC_OAUTH_ALLOW_ASSIGN_GRAFANA_ADMIN=true
+      - GF_AUTH_GENERIC_OAUTH_SKIP_ORG_ROLE_SYNC=false
+      - GF_AUTH_GENERIC_OAUTH_TLS_SKIP_VERIFY_INSECURE=true
+
     networks:
       - afs-ai-hub-network
 volumes:
   keycloak_db:
   prometheus_data:
-  
+
+
 networks:
   afs-ai-hub-network:
     name: afs-ai-hub-network
