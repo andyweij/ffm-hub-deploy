@@ -59,6 +59,7 @@ services:
       - ./util/wait-for-it.sh:/app/wait-for-it.sh
       - /opt/${LOCAL_DIR}/logs/api-relay:/app/logs
     environment:
+      - DATA_SOURCE=${DATA_SOURCE}
       - API_RELAY_PORT=${API_RELAY_PORT}
       - HOST_IP=${VM_IP}
       - SERVER_PORT=8443

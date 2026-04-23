@@ -113,6 +113,7 @@ $env:AGENT_PREFIX   = $Config.ApiRelay.AGENT_PREFIX
 $env:LOCAL_DIR       = $Config.ApiRelay.LOCAL_DIR
 $env:LOCAL_AGENT_DIR = $Config.ApiRelay.LOCAL_AGENT_DIR
 $env:LOCAL_MODEL_DIR = $Config.ApiRelay.LOCAL_MODEL_DIR
+$env:DATA_SOURCE     = $Config.ApiRelay.DATA_SOURCE
 $env:HUB_NAME        = $Config.ApiRelay.HUB_NAME
 $env:HARBOR_REGISTRY = $Config.ApiRelay.HARBOR_REGISTRY
 $env:HARBOR_PROJECT  = $Config.ApiRelay.HARBOR_PROJECT

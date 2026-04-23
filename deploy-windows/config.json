@@ -38,6 +38,7 @@
         "LOCAL_DIR": "afs-ai-hub",
         "LOCAL_AGENT_DIR": "agents",
         "LOCAL_MODEL_DIR": "models",
+        "DATA_SOURCE": "json",
         "HUB_NAME": "afs-ai-hub",
         "HARBOR_REGISTRY": "202.5.253.162:443",
         "HARBOR_PROJECT": "ffm-hub",

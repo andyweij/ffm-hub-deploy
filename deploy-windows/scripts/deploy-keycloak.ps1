@@ -36,13 +36,28 @@ if (-not (Test-Path $ZipPath)) {
 if (-not (Test-Path $KeycloakHome)) {
     Write-Log "正在解壓縮 Keycloak..."
     Expand-Archive -Path $ZipPath -DestinationPath $InstallDir -Force
-    
+    # --- [加入緩衝] 讓防毒軟體有時間掃描 ---
+    Start-Sleep -Seconds 3
     # 檢查是否有「資料夾套資料夾」的情況，有的話把它移出來
     $NestedDir = Join-Path $InstallDir $KeycloakDist
     if (Test-Path "$NestedDir\$KeycloakDist") {
-        Write-Log "修復巢狀資料夾結構..."
-        Move-Item "$NestedDir\$KeycloakDist\*" "$NestedDir\" -Force
-        Remove-Item "$NestedDir\$KeycloakDist" -Recurse
+        # --- [加入重試機制] ---
+        $maxRetries = 5
+        $retryCount = 0
+        $moveSuccess = $false
+
+        while ($retryCount -lt $maxRetries -and -not $moveSuccess) {
+            try {
+                Move-Item "$NestedDir\$KeycloakDist\*" "$NestedDir\" -Force -ErrorAction Stop
+                Remove-Item "$NestedDir\$KeycloakDist" -Recurse -Force -ErrorAction Stop
+                $moveSuccess = $true
+            } catch {
+                $retryCount++
+                Write-Log "資料夾正被佔用，等待 2 秒後重試移動... ($retryCount/$maxRetries)"
+                Start-Sleep -Seconds 2
+            }
+        }
+        if (-not $moveSuccess) { Write-Error "Keycloak 資料夾移動失敗，請檢查權限或防毒軟體。" }
     }
 } else {
     Write-Log "Keycloak 資料夾已存在，跳過解壓縮。"

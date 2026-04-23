@@ -56,6 +56,9 @@ try {
         
         Write-Log "解壓縮中..."
         Expand-Archive -Path $ZipPath -DestinationPath $RuntimeDir -Force
+        # --- [加入緩衝] 等待防毒軟體掃描釋放執行檔 ---
+        Write-Log "等待系統釋放檔案鎖定..."
+        Start-Sleep -Seconds 3
     }
 
     # ============================================

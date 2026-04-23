@@ -8,7 +8,7 @@ $PROJECT_ROOT = Split-Path -Parent $SCRIPT_DIR
 $RuntimeDir = Join-Path $PROJECT_ROOT "runtime"
 $LlamaDir = Join-Path $RuntimeDir "llama-cpp"
 
-$VersionTag = "b8196"
+$VersionTag = "b8416"
 
 # 根據選擇的 GPU 決定檔名
 $ZipName = switch ($GPU_PROVIDER) {

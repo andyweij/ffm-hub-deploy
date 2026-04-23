@@ -30,10 +30,32 @@ try {
         Write-Log "正在解壓縮至 $FullJdkPath..."
         Expand-Archive -Path $ZipPath -DestinationPath $InstallBaseDir -Force
 
+        # 給予防毒軟體一點時間緩衝 (先暫停 2 秒)
+        Start-Sleep -Seconds 2
+        
         # 修正解壓後多一層資料夾的問題
         $ExtractedFolder = Get-ChildItem -Path $InstallBaseDir -Directory -Filter "jdk-17*" | Select-Object -First 1
         if ($ExtractedFolder.Name -ne $JdkFolder) {
-            Rename-Item -Path $ExtractedFolder.FullName -NewName $JdkFolder
+            $maxRetries = 5        # 最大重試次數
+            $retryCount = 0
+            $renameSuccess = $false
+
+            while ($retryCount -lt $maxRetries -and -not $renameSuccess) {
+                try {
+                    # 嘗試更名，若失敗會觸發 catch
+                    Rename-Item -Path $ExtractedFolder.FullName -NewName $JdkFolder -ErrorAction Stop
+                    $renameSuccess = $true
+                    Write-Log "JDK 資料夾更名成功。"
+                } catch {
+                    $retryCount++
+                    Write-Log "資料夾正被系統或防毒軟體佔用，等待 2 秒後重試... ($retryCount/$maxRetries)"
+                    Start-Sleep -Seconds 2
+                }
+            }
+
+            if (-not $renameSuccess) {
+                Write-Error "JDK 更名失敗，已達最大重試次數，請確認防毒軟體是否鎖定檔案。"
+            }
         }
     } else {
         Write-Log "Java 已安裝於 $FullJdkPath，跳過下載與解壓。"

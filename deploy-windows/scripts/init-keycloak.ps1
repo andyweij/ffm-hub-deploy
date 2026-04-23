@@ -47,8 +47,26 @@ function Write-Log {
     param([string]$Message, [string]$Color = "White")
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $logMessage = "[$timestamp] $Message"
+    
+    # 1. 輸出到畫面
     Write-Host $logMessage -ForegroundColor $Color
-    Add-Content -Path $LOG_FILE -Value $logMessage
+
+    # 2. 寫入檔案 (加入 Retry 防鎖定機制)
+    $maxRetries = 5
+    $retryCount = 0
+    $written = $false
+
+    while ($retryCount -lt $maxRetries -and -not $written) {
+        try {
+            # 這裡加上 -ErrorAction Stop，讓失敗時直接跳進 catch
+            Add-Content -Path $LOG_FILE -Value $logMessage -ErrorAction Stop
+            $written = $true
+        } catch {
+            $retryCount++
+            # 遇到鎖定，暫停 200 毫秒後重試
+            Start-Sleep -Milliseconds 200 
+        }
+    }
 }
 
 function Write-StepHeader {
