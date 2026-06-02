@@ -1,6 +1,6 @@
 services:
   aiportal:
-    image: 202.5.253.162:443/ffm-hub/aiportal:1.10.6
+    image: 202.5.253.162:443/ffm-hub/aiportal:1.12.2
     container_name: aiportal
     ports:
       - "443:8443"
@@ -43,7 +43,7 @@ services:
     networks:
       - afs-ai-hub-network
   api-relay:
-    image: 202.5.253.162:443/ffm-hub/api-relay:0.8.14
+    image: 202.5.253.162:443/ffm-hub/api-relay:0.9.13
     container_name: api-relay
     runtime: nvidia
     ports:
@@ -201,7 +201,6 @@ services:
 volumes:
   keycloak_db:
   prometheus_data:
-
 
 networks:
   afs-ai-hub-network:

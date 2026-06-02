@@ -29,24 +29,26 @@ fi
 # 根據 .env 中的設定選擇 IP 取得方式
 MAX_RETRIES=10
 RETRY_COUNT=0
-
 if [ "$IP_ACQUISITION_METHOD" == "local" ]; then
     echo "使用本地 IP 取得方式，等待網路穩定..."
     
     while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-        # 取得預設路由網卡，並排除 docker 相關字眼
-        DEFAULT_IFACE=$(ip route | grep '^default' | grep -v 'docker' | awk '{print $5}' | head -n 1)
-        
-        if [ -n "$DEFAULT_IFACE" ]; then
-            # 取得該網卡的 IPv4，並確保只取第一行
-            CURRENT_VM_IP=$(ip -4 addr show "$DEFAULT_IFACE" | grep -oP 'inet \K[\d.]+' | head -n 1)
+
+        # 從 hostname -I 取出第一個非 loopback、非 docker 網段的 IP
+        CURRENT_VM_IP=$(hostname -I | tr ' ' '\n' \
+            | grep -v '^127\.' \
+            | grep -v '^172\.1[6-9]\.' \
+            | grep -v '^172\.2[0-9]\.' \
+            | grep -v '^172\.3[0-1]\.' \
+            | grep -v '^$' \
+            | head -n 1)
             
-            # 確保抓到的不是回環位址 (127.x.x.x) 或 Docker 預設網段 (172.x.x.x)
-            if [[ -n "$CURRENT_VM_IP" && ! "$CURRENT_VM_IP" =~ ^172\. && "$CURRENT_VM_IP" != "127.0.0.1" ]]; then
-                echo "成功取得有效的本地 IP: $CURRENT_VM_IP"
-                break
-            fi
+        # 確保抓到的不是回環位址 (127.x.x.x) 或 Docker 預設網段 (172.x.x.x)
+        if [ -n "$CURRENT_VM_IP" ]; then
+            echo "成功取得有效的本地 IP: $CURRENT_VM_IP"
+            break
         fi
+        
         
         RETRY_COUNT=$((RETRY_COUNT + 1))
         echo "尚未取得有效 IP，等待中... ($RETRY_COUNT/$MAX_RETRIES)"
@@ -55,6 +57,11 @@ if [ "$IP_ACQUISITION_METHOD" == "local" ]; then
 
     if [ -z "$CURRENT_VM_IP" ]; then
         echo "錯誤: 超過重試次數，無法取得有效的本地 IP。"
+        echo ""             
+        echo "請執行以下指令並回傳結果以協助排查："
+        echo "  hostname -I"
+        echo "  ip a"
+        echo "  ip route"
         exit 1
     fi
 else

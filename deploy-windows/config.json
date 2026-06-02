@@ -42,8 +42,8 @@
         "HUB_NAME": "afs-ai-hub",
         "HARBOR_REGISTRY": "202.5.253.162:443",
         "HARBOR_PROJECT": "ffm-hub",
-        "HARBOR_USERNAME": "admin",
-        "HARBOR_PASSWORD": "admin",
+        "HARBOR_USERNAME": "Afsuser1",
+        "HARBOR_PASSWORD": "Afsuser1",
         "TIMEOUT_ASYNC_MS": "600000",
         "TIMEOUT_KEYCLOAK_MS": "10000"
     },
